@@ -1,27 +1,34 @@
+# Purpose: Creates and deploys an automated cleanup script with logging and rotation
+# Includes: Directory creation, cleanup script deployment, and log rotation configuration
+# Requirements: Requires root privileges for system directory operations
+
 - name: Automate Basic Tasks with Scripts
   hosts: all
   become: true
   tasks:
+    # Setup logging infrastructure
     - name: Create log directory
       file:
         path: /var/log/cleanup
         state: directory
         mode: '0755'
+    # Deploy main cleanup script with error handling and logging
     - name: Create enhanced cleanup script
       copy:
         dest: /usr/local/bin/cleanup.sh
         content: |
           #!/bin/bash
 
-          # Set error handling
+          # Enable strict error handling
           set -e
 
-          # Configure logging
+          # Setup daily log file with timestamp
           LOG_FILE="/var/log/cleanup/cleanup-$(date +%Y%m%d).log"
 
+          # Start logging operation
           echo "Starting cleanup operation at $(date)" >> "$LOG_FILE"
 
-          # Create backup of tmp directory
+          # Create safety backup before cleanup
           if [ -d "/tmp" ]; then
             BACKUP_DIR="/var/backups/tmp-$(date +%Y%m%d_%H%M%S)"
             mkdir -p "$BACKUP_DIR"
@@ -29,12 +36,14 @@
             echo "Backup created at $BACKUP_DIR" >> "$LOG_FILE"
           fi
 
-          # Safely clean temporary files
+          # Perform cleanup operations with error logging
           find /tmp -type f -mtime +7 -delete 2>> "$LOG_FILE"
           find /tmp -type d -empty -delete 2>> "$LOG_FILE"
 
+          # Log completion status
           echo "Cleanup completed at $(date)" >> "$LOG_FILE"
         mode: '0755'
+    # Configure log rotation to prevent disk space issues
     - name: Create cleanup log rotation
       copy:
         dest: /etc/logrotate.d/cleanup

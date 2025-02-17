@@ -1,11 +1,18 @@
+# Playbook: Collaboration Environment Setup
+# Purpose: Configures development environment with essential collaboration tools
+# Target: All hosts
+# Requirements: None
+
 - name: Enable Collaboration with Development Teams
   hosts: all
   become: true
   vars:
+    # Default Git configuration settings
     git_config:
       user.name: "{{ git_username | default('Team Developer') }}"
       user.email: "{{ git_email | default('team@example.com') }}"
   tasks:
+    # Install required packages for Debian-based systems
     - name: Install collaboration packages (Debian)
       apt:
         name:
@@ -16,6 +23,7 @@
         state: present
         update_cache: yes
       when: ansible_os_family == "Debian"
+    # Install required packages for RedHat-based systems
     - name: Install collaboration packages (RedHat)
       yum:
         name:
@@ -25,17 +33,20 @@
           - tmux
         state: present
       when: ansible_os_family == "RedHat"
+    # Set up global Git configuration using provided variables
     - name: Configure Git globally
       git_config:
         name: "{{ item.key }}"
         value: "{{ item.value }}"
         scope: global
       loop: "{{ git_config | dict2items }}"
+    # Ensure SSH directory exists with proper permissions
     - name: Create SSH directory
       file:
         path: ~/.ssh
         state: directory
         mode: '0700'
+    # Configure SSH for secure Git operations
     - name: Configure Git SSH settings
       lineinfile:
         path: ~/.ssh/config

@@ -1,59 +1,60 @@
+# Playbook for setting up Jenkins CI/CD pipeline
 - name: Setup CI/CD Pipeline
   hosts: all
   become: true
-  
+  # Handler to restart Jenkins when needed
   handlers:
     - name: restart jenkins
       service:
         name: jenkins
         state: restarted
-
   tasks:
+    # Ensure package cache is up to date
     - name: Update package cache
       package:
         update_cache: yes
       when: ansible_os_family == "Debian"
-
+    # Install Java requirement for Jenkins
     - name: Install Java
       package:
         name: openjdk-11-jdk
         state: present
       when: ansible_os_family == "Debian"
-
+    # Add Jenkins repository authentication
     - name: Add Jenkins apt key
       apt_key:
         url: https://pkg.jenkins.io/debian-stable/jenkins.io.key
         state: present
       when: ansible_os_family == "Debian"
-
+    # Configure Jenkins package repository
     - name: Add Jenkins repository
       apt_repository:
         repo: deb https://pkg.jenkins.io/debian-stable binary/
         state: present
       when: ansible_os_family == "Debian"
-
+    # Install Jenkins package
     - name: Install Jenkins
       package:
         name: jenkins
         state: present
       notify: restart jenkins
-
+    # Ensure Jenkins service is running
     - name: Start Jenkins service
       service:
         name: jenkins
         state: started
         enabled: yes
-
+    # Health check - ensure Jenkins is responding
     - name: Wait for Jenkins to start
       wait_for:
         port: 8080
         timeout: 60
-
+    # Retrieve initial admin credentials
     - name: Get initial admin password
       command: cat /var/lib/jenkins/secrets/initialAdminPassword
       register: jenkins_password
       changed_when: false
-
+    # Output the admin password for initial setup
     - name: Display Jenkins initial admin password
       debug:
         var: jenkins_password.stdout

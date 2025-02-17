@@ -1,27 +1,37 @@
+# System Health Monitoring Playbook
+# This playbook collects and reports various system health metrics
+# including CPU, memory, disk usage, and system uptime
+
 - name: Monitor System Health
   hosts: all
   gather_facts: true
+  # Define threshold values for alerting
   vars:
     cpu_threshold: 80
     memory_threshold: 90
     disk_threshold: 85
   tasks:
+    # Collect CPU load averages for 1, 5, and 15 minutes
     - name: Get CPU Load
       shell: "cat /proc/loadavg | awk '{print $1,$2,$3}'"
       register: cpu_load
       ignore_errors: true
+    # Calculate memory usage as a percentage
     - name: Get Memory Usage
       shell: "free | grep Mem | awk '{print $3/$2 * 100.0}'"
       register: memory_usage
       ignore_errors: true
+    # Get root filesystem usage percentage
     - name: Get Disk Usage
       shell: "df -h / | tail -n 1 | awk '{print $5}' | cut -d'%' -f1"
       register: disk_usage
       ignore_errors: true
+    # Get system uptime in human-readable format
     - name: Get System Uptime
       shell: "uptime -p"
       register: system_uptime
       ignore_errors: true
+    # Combine all metrics into a single fact
     - name: Collect System Status
       set_fact:
         system_status:
@@ -29,6 +39,7 @@
           memory: "{{ memory_usage.stdout | default('N/A') | float | round(2) }}"
           disk: "{{ disk_usage.stdout | default('N/A') }}"
           uptime: "{{ system_uptime.stdout | default('N/A') }}"
+    # Display formatted health report
     - name: Display System Health Report
       debug:
         msg: |
@@ -38,6 +49,7 @@
           CPU Load (1,5,15 min): {{ system_status.cpu }}
           Memory Usage: {{ system_status.memory }}%
           Disk Usage: {{ system_status.disk }}%
+    # Check for threshold violations and display warnings
     - name: Alert on High Resource Usage
       debug:
         msg: "WARNING: {{ item.resource }} usage is above threshold ({{ item.value }}%)"

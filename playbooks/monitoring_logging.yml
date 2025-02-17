@@ -1,16 +1,22 @@
+# This playbook installs and configures a complete monitoring and logging stack
+# including Prometheus, Grafana, Node Exporter, and Filebeat
 - name: Install and Configure Monitoring & Logging Tools
   hosts: all
   become: true
   vars:
+    # Specify versions to ensure consistency across deployments
     prometheus_version: 2.42.0
     grafana_version: 9.4.7
   tasks:
+    # Package Installation Section
     - name: Add Grafana GPG key (Debian)
+      # Required for Debian-based systems to trust Grafana packages
       apt_key:
         url: https://packages.grafana.com/gpg.key
         state: present
       when: ansible_os_family == "Debian"
       tags: grafana
+    # Install monitoring stack on Debian-based systems
     - name: Install monitoring tools (Debian)
       apt:
         name:
@@ -26,6 +32,7 @@
         - restart node_exporter
         - restart grafana
       tags: install
+    # Install monitoring stack on RedHat-based systems
     - name: Install monitoring tools (RedHat)
       yum:
         name:
@@ -40,19 +47,24 @@
         - restart node_exporter
         - restart grafana
       tags: install
+    # Configuration Section
     - name: Configure Prometheus
+      # Apply custom Prometheus configuration from template
       template:
         src: prometheus.yml.j2
         dest: /etc/prometheus/prometheus.yml
       notify: restart prometheus
       tags: config
     - name: Configure Filebeat
+      # Apply custom Filebeat configuration from template
       template:
         src: filebeat.yml.j2
         dest: /etc/filebeat/filebeat.yml
       notify: restart filebeat
       tags: config
+    # Service Management Section
     - name: Ensure services are running
+      # Enable and start all monitoring services
       service:
         name: "{{ item }}"
         state: started
@@ -63,6 +75,7 @@
         - grafana-server
         - filebeat
       tags: services
+  # Handler Section - Restart services when configuration changes
   handlers:
     - name: restart prometheus
       service:

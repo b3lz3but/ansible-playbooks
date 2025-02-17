@@ -1,6 +1,9 @@
+# This playbook manages user accounts and SSH access across all hosts
+# It creates a user with sudo and docker privileges, and configures their SSH access
 - name: Create User and Configure SSH Access
   hosts: all
   become: true
+  # Define variables for user configuration
   vars:
     user_name: devops
     user_shell: /bin/bash
@@ -10,11 +13,13 @@
       - docker
     ssh_key_path: files/ssh_key.pub
   tasks:
+    # Create required system groups
     - name: Ensure groups exist
       group:
         name: "{{ item }}"
         state: present
       loop: "{{ user_groups }}"
+    # Create user account with password and group memberships
     - name: Create user account
       user:
         name: "{{ user_name }}"
@@ -24,12 +29,14 @@
         append: yes
         state: present
       register: user_creation
+    # Add user's SSH public key to authorized_keys
     - name: Set up authorized SSH key
       authorized_key:
         user: "{{ user_name }}"
         state: present
         key: "{{ lookup('file', ssh_key_path) }}"
       when: user_creation is success
+    # Secure SSH directory permissions
     - name: Configure SSH directory permissions
       file:
         path: "/home/{{ user_name }}/.ssh"

@@ -2,7 +2,7 @@
 
 ## 📌 Overview
 
-This repository contains a collection of **Ansible playbooks** to automate common **DevOps** tasks such as:
+This repository contains a collection of **Ansible playbooks** to automate essential **DevOps** tasks, including:
 
 - **System Administration** (User management, package updates, kernel upgrades, file system maintenance)
 - **Networking** (Firewall rules, DNS settings, load balancing, VPN configurations)
@@ -56,6 +56,7 @@ Ensure you have Ansible installed on your control machine (you can also install 
 ```sh
 sudo apt update && sudo apt install ansible -y  # Debian/Ubuntu
 sudo yum install ansible -y                     # CentOS/RHEL
+brew install ansible                             # macOS
 ```
 
 ### 2️⃣ Configure Inventory File (`inventory.ini`)
@@ -130,11 +131,11 @@ ansible-playbook -i inventory.ini playbooks/user_management.yml --extra-vars "us
 
 ## 🎯 Best Practices
 
-✔️ Always **test** playbooks in a staging environment before running in production.
-✔️ Use **roles** to organize playbooks for larger projects.
-✔️ Implement **Ansible Vault** for storing sensitive credentials securely.
-✔️ Use **tags** for running specific tasks within a playbook.
-✔️ Schedule **cron jobs** to run playbooks automatically for maintenance tasks.
+✔️ Always **test** playbooks in a staging environment before running in production.<br>
+✔️ Use **roles** to organize playbooks for larger projects.<br>
+✔️ Implement **Ansible Vault** for storing sensitive credentials securely.<br>
+✔️ Use **tags** for running specific tasks within a playbook.<br>
+✔️ Schedule **cron jobs** to run playbooks automatically for maintenance tasks.<br>
 
 ## 📢 Contribution
 

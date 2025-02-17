@@ -1,13 +1,20 @@
+# Description: Network Configuration and Management Playbook
+# Purpose: Installs and configures network-related packages, firewall services,
+#          and performs basic network connectivity tests
+# Prerequisites: Root/sudo access required (become: true)
+
 - name: Network Configuration and Management
   hosts: all
   become: true
   gather_facts: true
   pre_tasks:
+    # Initial connectivity check before proceeding with configuration
     - name: Check connectivity
       ping:
       register: ping_result
       ignore_errors: true
   tasks:
+    # Install appropriate firewall package based on OS family
     - name: Install firewall package (RedHat)
       package:
         name: firewalld
@@ -22,12 +29,14 @@
       when: ansible_os_family == "Debian"
       register: firewall_install
       ignore_errors: true
+    # Ensure firewall service is active and enabled on boot (RedHat only)
     - name: Ensure firewall service is running (RedHat)
       service:
         name: firewalld
         state: started
         enabled: yes
       when: ansible_os_family == "RedHat" and firewall_install is success
+    # Collect network interface information for debugging
     - name: Get network interfaces
       command: ip a
       register: net_interfaces
@@ -35,6 +44,7 @@
     - name: Display network interfaces
       debug:
         msg: "{{ net_interfaces.stdout_lines }}"
+    # Verify external connectivity using Google DNS
     - name: Check network connectivity
       command: ping -c 4 8.8.8.8
       register: ping_test
@@ -43,11 +53,12 @@
     - name: Display connectivity status
       debug:
         msg: "Network connectivity: {{ 'OK' if ping_test is success else 'FAILED' }}"
+    # Install essential networking tools
     - name: Ensure network manager is installed
       package:
         name: "{{ item }}"
         state: present
       loop:
-        - NetworkManager
-        - net-tools
-      ignore_errors: true
+        - NetworkManager # Primary network configuration service
+        - net-tools # Basic networking utilities
+      ignore_errors: true # Continue if package installation fails

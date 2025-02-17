@@ -1,13 +1,17 @@
+# Security scan and system hardening playbook
+# This playbook performs comprehensive security scanning and system hardening tasks
 - name: Enhanced Security Scan and Hardening
   hosts: all
   become: true
   tasks:
+    # Update system packages to patch security vulnerabilities
     - name: Update System Packages
       apt:
         update_cache: yes
         upgrade: yes
       when: ansible_os_family == "Debian"
       ignore_errors: true
+    # Install essential security tools for system monitoring and protection
     - name: Install Security Tools
       package:
         name:
@@ -16,36 +20,44 @@
           - fail2ban
           - ufw
         state: present
+    # Update antivirus definitions for better threat detection
     - name: Update ClamAV Signatures
       command: freshclam
       ignore_errors: true
+    # Configure firewall with default deny policy for enhanced security
     - name: Configure UFW
       ufw:
         state: enabled
         policy: deny
         logging: on
+    # Allow SSH access through firewall while maintaining security
     - name: Allow SSH
       ufw:
         rule: allow
         port: ssh
         proto: tcp
+    # Set up intrusion prevention with fail2ban
     - name: Configure fail2ban
       template:
         src: jail.local.j2
         dest: /etc/fail2ban/jail.local
       notify: restart fail2ban
+    # Perform rootkit detection scan
     - name: Run RKHunter Check
       command: rkhunter --check --skip-keypress
       register: rkhunter_results
       ignore_errors: true
+    # Scan home directories for malware and viruses
     - name: Scan Home Directory for Viruses
       command: clamscan -r /home --log=/var/log/clamav/scan.log
       register: scan_results
       ignore_errors: true
+    # Audit network security by checking open ports
     - name: Check Open Ports
       shell: ss -tulnp
       register: open_ports
       changed_when: false
+    # Compile all security scan results into a comprehensive report
     - name: Generate Security Report
       template:
         src: security_report.j2
@@ -56,6 +68,7 @@
           rkhunter: "{{ rkhunter_results }}"
           open_ports: "{{ open_ports }}"
   handlers:
+    # Restart fail2ban when configuration changes
     - name: restart fail2ban
       service:
         name: fail2ban

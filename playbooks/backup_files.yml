@@ -1,17 +1,29 @@
+# Backup Files Playbook
+# Purpose: Creates timestamped backups of important system files
+# Requirements:
+#   - Requires root access (become: true)
+#   - Target hosts must have sufficient disk space in /backup
+#   - Rsync must be installed for synchronize module
+
 - name: Backup Important Files
   hosts: all
   become: true
   vars:
+    # Format: YYYY-MM-DDTHHmmss+ZZZZ
     backup_timestamp: "{{ ansible_date_time.iso8601 | regex_replace(':', '') }}"
     backup_root: /backup
     max_backups: 5
+
   tasks:
+    # Create unique backup directory for this run
     - name: Create backup directory with timestamp
       file:
         path: "{{ backup_root }}/{{ backup_timestamp }}"
         state: directory
         mode: '0755'
       register: backup_dir
+
+    # Recursively copy all /etc files preserving attributes
     - name: Copy /etc configs
       synchronize:
         src: /etc/
@@ -20,20 +32,28 @@
         checksum: yes
       register: sync_result
       ignore_errors: true
+
+    # Generate checksums to verify backup integrity
     - name: Verify backup integrity
       command: "find {{ backup_dir.path }} -type f -exec md5sum {} \\;"
       register: backup_checksums
       when: sync_result is success
+
+    # Store checksums for future verification
     - name: Save backup checksums
       copy:
         content: "{{ backup_checksums.stdout }}"
         dest: "{{ backup_dir.path }}/CHECKSUM.md5"
       when: backup_checksums is defined
+
+    # Implement backup rotation to prevent disk space issues
     - name: Remove old backups
       shell: |
         cd {{ backup_root }} && \
         ls -1t | tail -n +{{ max_backups + 1 }} | xargs -r rm -rf
       when: backup_dir.changed
+
+    # Record successful backup completion for monitoring
     - name: Log backup completion
       local_action:
         module: logger

@@ -1,7 +1,12 @@
+# Purpose: Implements comprehensive security hardening measures
+# Includes: Security packages, MAC systems, firewall, SSH hardening, and password policies
+# Target: All managed servers requiring enhanced security configuration
+
 - name: Security Hardening
   hosts: all
   become: true
   tasks:
+    # Install essential security packages for system protection
     - name: Install security packages
       package:
         name:
@@ -10,12 +15,15 @@
           - libpam-pwquality
           - auditd
         state: present
+    # Configure Mandatory Access Control (MAC) systems
+    # SELinux for RedHat-based systems
     - name: Configure SELinux (RedHat)
       selinux:
         policy: targeted
         state: enforcing
       when: ansible_os_family == "RedHat"
       register: selinux_config
+    # AppArmor for Debian-based systems
     - name: Configure AppArmor (Debian)
       block:
         - name: Install AppArmor
@@ -28,11 +36,13 @@
             state: started
             enabled: yes
       when: ansible_os_family == "Debian"
+    # Setup intrusion prevention with Fail2Ban
     - name: Configure Fail2Ban
       service:
         name: fail2ban
         state: started
         enabled: yes
+    # Harden SSH configuration for improved security
     - name: Configure SSH
       lineinfile:
         path: /etc/ssh/sshd_config
@@ -43,6 +53,7 @@
         - {regexp: '^PasswordAuthentication', line: 'PasswordAuthentication no'}
         - {regexp: '^X11Forwarding', line: 'X11Forwarding no'}
       notify: restart sshd
+    # Configure firewall rules using UFW
     - name: Setup UFW firewall
       ufw:
         state: enabled
@@ -53,6 +64,7 @@
         - '22'
         - '80'
         - '443'
+    # Implement strong password policies
     - name: Set password policies
       lineinfile:
         path: /etc/security/pwquality.conf
@@ -64,6 +76,7 @@
         - {regexp: '^ucredit', line: 'ucredit = -1'}
         - {regexp: '^lcredit', line: 'lcredit = -1'}
         - {regexp: '^ocredit', line: 'ocredit = -1'}
+  # Service restart handlers
   handlers:
     - name: restart sshd
       service:

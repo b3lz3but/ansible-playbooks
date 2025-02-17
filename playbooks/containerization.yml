@@ -1,7 +1,11 @@
+# This playbook installs and configures Docker and Kubernetes on target hosts
+# It handles package installation, system configuration, and service management
+
 - name: Containerization with Docker and Kubernetes
   hosts: all
   become: true
   vars:
+    # Docker daemon configuration for Kubernetes compatibility
     docker_daemon_config:
       exec-opts: ["native.cgroupdriver=systemd"]
       log-driver: "json-file"
@@ -9,6 +13,7 @@
         max-size: "100m"
       storage-driver: "overlay2"
   pre_tasks:
+    # Verify minimum system requirements before proceeding
     - name: Check system requirements
       assert:
         that:
@@ -16,6 +21,7 @@
           - ansible_architecture == "x86_64"
         msg: "System requirements not met. Need at least 2GB RAM and x86_64 architecture."
   tasks:
+    # Docker Installation and Configuration
     - name: Add Docker GPG key
       apt_key:
         url: https://download.docker.com/linux/ubuntu/gpg
@@ -42,13 +48,16 @@
         state: present
       when: ansible_os_family == "Debian"
       notify: restart docker
+    # Configure Docker daemon with specific settings for k8s
     - name: Configure Docker daemon
       copy:
         content: "{{ docker_daemon_config | to_nice_json }}"
         dest: /etc/docker/daemon.json
         mode: '0644'
       notify: restart docker
+    # Kubernetes Prerequisites
     - name: Disable swap
+      # Required for Kubernetes - swap must be disabled
       command: swapoff -a
       when: ansible_swaptotal_mb > 0
     - name: Remove swap from fstab
@@ -57,7 +66,9 @@
         regexp: '^([^#].*?\sswap\s+sw\s+.*)$'
         line: '# \1'
         backrefs: yes
+    # Kubernetes Installation
     - name: Add Kubernetes GPG key
+      # Add the official Kubernetes repository key
       apt_key:
         url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
         state: present
@@ -77,7 +88,9 @@
         update_cache: yes
       when: ansible_os_family == "Debian"
       notify: restart kubelet
+    # Configure required kernel modules and system parameters
     - name: Configure kernel modules for Kubernetes
+      # Enable networking modules required by k8s
       modprobe:
         name: "{{ item }}"
         state: present
@@ -85,6 +98,7 @@
         - br_netfilter
         - overlay
     - name: Configure sysctl parameters
+      # Set necessary network bridge parameters
       sysctl:
         name: "{{ item.name }}"
         value: "{{ item.value }}"
@@ -94,17 +108,21 @@
         - {name: 'net.bridge.bridge-nf-call-iptables', value: '1'}
         - {name: 'net.ipv4.ip_forward', value: '1'}
         - {name: 'net.bridge.bridge-nf-call-ip6tables', value: '1'}
+    # Service Management
     - name: Enable Docker service
+      # Ensure Docker starts on boot and is running
       service:
         name: docker
         state: started
         enabled: yes
     - name: Enable Kubelet service
+      # Ensure Kubelet starts on boot and is running
       service:
         name: kubelet
         state: started
         enabled: yes
   handlers:
+    # Service restart handlers
     - name: restart docker
       service:
         name: docker

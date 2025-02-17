@@ -1,18 +1,25 @@
+# This playbook monitors disk space usage on all hosts and alerts when usage exceeds a threshold
+# It will fail if disk usage is above the specified threshold percentage
 - name: Check Disk Space Usage
   hosts: all
   vars:
-    disk_threshold: 80 # Threshold percentage
+    # Percentage at which to trigger warnings and failures
+    disk_threshold: 80
   tasks:
+    # Extract disk usage percentage for root partition
     - name: Get disk space information
       shell: df -h / | tail -n 1 | awk '{print $5}' | sed 's/%//'
       register: disk_usage
       ignore_errors: true
+    # Convert the string output to an integer for comparison
     - name: Parse disk usage
       set_fact:
         usage_percent: "{{ disk_usage.stdout | int }}"
+    # Get complete disk usage information for logging
     - name: Display detailed disk information
       shell: df -h /
       register: disk_details
+    # Output current disk usage details and threshold
     - name: Show disk usage details
       debug:
         msg: |
@@ -20,10 +27,12 @@
           {{ disk_details.stdout_lines | join('\n  ') }}
           Current Usage: {{ usage_percent }}%
           Threshold: {{ disk_threshold }}%
+    # Provide warning message when threshold is exceeded
     - name: Alert on high disk usage
       debug:
         msg: "WARNING: Disk usage is critical on {{ inventory_hostname }}!"
       when: usage_percent | int > disk_threshold | int
+    # Stop playbook execution if disk usage is too high
     - name: Fail when disk space exceeds threshold
       fail:
         msg: "Disk space usage ({{ usage_percent }}%) exceeds threshold ({{ disk_threshold }}%)"

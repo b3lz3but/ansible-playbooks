@@ -1,0 +1,56 @@
+version: "3.8" # Using latest stable version for better feature support
+
+services:
+  ansible:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ubuntu:latest
+    container_name: ansible_controller
+    volumes:
+      - .:/ansible:rw # Mount current directory with read-write permissions
+      - /var/run/docker.sock:/var/run/docker.sock # Allow docker command execution from inside
+    working_dir: /ansible
+    stdin_open: true # Keep STDIN open for interactive sessions
+    tty: true # Allocate a pseudo-TTY
+    entrypoint: ["/bin/bash", "/ansible/interactive_ansible.sh"]
+    environment:
+      - ANSIBLE_HOST_KEY_CHECKING=False # Disable host key checking for easier testing
+      - TZ=UTC # Set timezone
+      - ANSIBLE_FORCE_COLOR=1
+      - PYTHONUNBUFFERED=1
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid
+      - /run:rw,noexec,nosuid
+    healthcheck: # Add healthcheck to monitor container health
+      test: ["CMD", "bash", "-c", "ps aux | grep ansible"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - ansible_network
+    deploy: # Add resource limits
+      resources:
+        limits:
+          cpus: "1"
+          memory: 1G
+        reservations:
+          cpus: "0.5"
+          memory: 512M
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  ansible_network:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.28.0.0/16

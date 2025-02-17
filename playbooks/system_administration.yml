@@ -2,6 +2,8 @@
   hosts: all
   become: true
   tasks:
+    # Update package cache for both Debian and RedHat based systems
+    # This ensures the package lists are up to date before installing packages
     - name: Update package cache (apt)
       apt:
         update_cache: yes
@@ -11,6 +13,8 @@
       yum:
         update_cache: yes
       when: ansible_os_family == "RedHat"
+    # Install essential system utilities and tools
+    # These packages provide basic system administration capabilities
     - name: Ensure essential system packages are installed (apt)
       apt:
         name:
@@ -45,6 +49,8 @@
       when: ansible_os_family == "RedHat"
       register: yum_install_result
       ignore_errors: true
+    # Perform system-wide package upgrades
+    # This ensures all installed packages are up to date
     - name: Perform system upgrade (apt)
       apt:
         upgrade: dist
@@ -57,6 +63,7 @@
         state: latest
       when: ansible_os_family == "RedHat"
       register: yum_upgrade_result
+    # Error handling for package installation failures
     - name: Log package installation failures
       debug:
         msg: "Package installation failed on {{ inventory_hostname }}"

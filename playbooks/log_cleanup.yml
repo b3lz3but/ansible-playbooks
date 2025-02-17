@@ -1,21 +1,37 @@
+---
+# Purpose: Automated cleanup of log files across all hosts
+# The playbook handles finding, backing up (optional), and removing old log files
+# based on age and size criteria. It also maintains a cleanup history.
+
 - name: Log Files Cleanup
   hosts: all
   become: true
+  
+  # Configuration variables
   vars:
+    # Number of days to keep logs
     log_retention_days: 30
+    # Maximum size of log files to retain (in MB)
     log_size_limit_mb: 100
+    # Enable/disable backup before deletion
     backup_enabled: true
+    # Location for log backups
     backup_path: "/var/backup/logs"
+    # Log file patterns to match
     log_patterns:
       - "*.log"
       - "*.gz"
+
   tasks:
+    # Ensure backup location exists if backups are enabled
     - name: Create backup directory if enabled
       file:
         path: "{{ backup_path }}"
         state: directory
         mode: '0755'
       when: backup_enabled
+
+    # Identify log files matching criteria
     - name: Find old log files
       find:
         paths: /var/log
@@ -24,6 +40,8 @@
         patterns: "{{ log_patterns }}"
         size: "{{ log_size_limit_mb }}m"
       register: logs_found
+
+    # Create compressed backups of files before deletion
     - name: Backup old logs if enabled
       archive:
         path: "{{ item.path }}"
@@ -31,12 +49,16 @@
       with_items: "{{ logs_found.files }}"
       when: backup_enabled
       ignore_errors: true
+
+    # Remove files that exceed age/size limits
     - name: Remove old log files
       file:
         path: "{{ item.path }}"
         state: absent
       with_items: "{{ logs_found.files }}"
       register: cleanup_result
+
+    # Record cleanup operation details
     - name: Log cleanup operation
       lineinfile:
         path: /var/log/cleanup_history.log

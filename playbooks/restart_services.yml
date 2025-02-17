@@ -1,6 +1,11 @@
+# Purpose: Automated playbook to manage and restart essential services (Nginx, Apache, MySQL)
+# Requires root/sudo privileges to restart services
+# Handles service existence checks and graceful failure handling
+
 - name: Restart Essential Services
   hosts: all
   become: true
+  # Pre-tasks: Check if required services exist before attempting operations
   pre_tasks:
     - name: Check if services exist
       stat:
@@ -11,23 +16,29 @@
         - apache2
         - mysql
       ignore_errors: true
+  # Handlers: Define service restart operations
   handlers:
+    # Nginx restart handler
     - name: restart nginx
       service:
         name: nginx
         state: restarted
       listen: "restart nginx service"
+    # Apache restart handler
     - name: restart apache
       service:
         name: apache2
         state: restarted
       listen: "restart apache service"
+    # MySQL restart handler
     - name: restart mysql
       service:
         name: mysql
         state: restarted
       listen: "restart mysql service"
+  # Main tasks: Service management and status verification
   tasks:
+    # Nginx service management block
     - name: Restart Nginx if exists
       block:
         - name: Check Nginx status
@@ -40,6 +51,7 @@
         - name: Log Nginx restart failure
           debug:
             msg: "Failed to restart Nginx service"
+    # Apache service management block
     - name: Restart Apache if exists
       block:
         - name: Check Apache status
@@ -52,6 +64,7 @@
         - name: Log Apache restart failure
           debug:
             msg: "Failed to restart Apache service"
+    # MySQL service management block
     - name: Restart MySQL if exists
       block:
         - name: Check MySQL status
@@ -64,6 +77,7 @@
         - name: Log MySQL restart failure
           debug:
             msg: "Failed to restart MySQL service"
+    # Final status check section
     - name: Verify services status
       service_facts:
     - name: Display service status

@@ -1,6 +1,10 @@
+# Database administration playbook for MySQL/MariaDB
+# Handles installation, security, backups, and monitoring
+
 - name: Database Administration
   hosts: all
   become: true
+  # Variables for MySQL configuration and backup settings
   vars:
     mysql_root_password: "{{ vault_mysql_root_password }}"
     backup_dir: /backup/mysql
@@ -10,6 +14,7 @@
       innodb_buffer_pool_size: 1G
       query_cache_size: 32M
   tasks:
+    # Install required MySQL packages and Python MySQL bindings
     - name: Install MySQL packages
       apt:
         name:
@@ -18,6 +23,7 @@
         state: present
         update_cache: yes
       when: ansible_os_family == "Debian"
+    # Secure the MySQL installation by setting root password
     - name: Secure MySQL installation
       mysql_user:
         login_user: root
@@ -27,6 +33,7 @@
         host_all: true
         password: "{{ mysql_root_password }}"
         update_password: always
+    # Remove anonymous users for security
     - name: Remove anonymous users
       mysql_user:
         login_user: root
@@ -34,6 +41,7 @@
         user: ""
         host_all: true
         state: absent
+    # Apply optimized MySQL configuration
     - name: Optimize MySQL configuration
       template:
         src: mysql_optimization.cnf.j2
@@ -42,6 +50,7 @@
         group: root
         mode: '0644'
       notify: Restart MySQL
+    # Set up backup infrastructure
     - name: Ensure backup directory exists
       file:
         path: "{{ backup_dir }}"
@@ -49,6 +58,7 @@
         mode: '0750'
         owner: mysql
         group: mysql
+    # Perform full database backup
     - name: Backup MySQL databases
       mysql_db:
         state: dump
@@ -58,20 +68,24 @@
         login_password: "{{ mysql_root_password }}"
       register: backup_result
       ignore_errors: true
+    # Compress backup to save space
     - name: Compress backup file
       archive:
         path: "{{ backup_dir }}/mysql_backup_{{ ansible_date_time.date }}.sql"
         dest: "{{ backup_dir }}/mysql_backup_{{ ansible_date_time.date }}.sql.gz"
         remove: true
       when: backup_result is success
+    # Verify backup integrity using gzip test
     - name: Verify backup integrity
       shell: "gunzip -t {{ backup_dir }}/mysql_backup_{{ ansible_date_time.date }}.sql.gz"
       register: verify_result
       failed_when: verify_result.rc != 0
       when: backup_result is success
+    # Implement backup rotation policy
     - name: Remove old backups
       shell: "find {{ backup_dir }} -name 'mysql_backup_*.sql' -mtime +{{ backup_retention_days }} -delete"
       when: backup_result is success
+    # Install additional monitoring tools
     - name: Install monitoring tools
       apt:
         name:
@@ -79,6 +93,7 @@
           - percona-toolkit
         state: present
       when: ansible_os_family == "Debian"
+    # Configure monitoring settings
     - name: Setup MySQL monitoring
       template:
         src: mysql_monitoring.cnf.j2
@@ -86,12 +101,14 @@
         owner: root
         group: root
         mode: '0644'
+    # Send backup status notification to DBA
     - name: Send notification
       mail:
         to: "{{ dba_email }}"
         subject: "MySQL Backup Status on {{ inventory_hostname }}"
         body: "Backup status: {{ 'Success' if backup_result is success else 'Failed' }}\nVerification: {{ 'Passed' if verify_result.rc == 0 else 'Failed' }}"
       when: dba_email is defined
+  # Handlers for service management
   handlers:
     - name: Restart MySQL
       service:

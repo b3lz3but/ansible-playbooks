@@ -1,45 +1,58 @@
+# This playbook performs system package updates on both Debian/Ubuntu and RedHat/CentOS systems
+# It includes safety checks, package updates, and automatic reboots when required
 - name: Update System Packages
   hosts: all
   become: true
   gather_facts: true
   pre_tasks:
+    # Verify target host is accessible before proceeding
     - name: Check connectivity
       ping:
   tasks:
+    # Handle Debian/Ubuntu systems
     - name: Update APT cache and upgrade packages (Debian/Ubuntu)
       block:
+        # Update package cache if older than 1 hour
         - name: Update APT cache
           apt:
             update_cache: yes
             cache_valid_time: 3600
+        # Upgrade APT packages
         - name: Upgrade APT packages
           apt:
             upgrade: dist
             autoremove: yes
             autoclean: yes
+        # Remove unused dependencies
         - name: Remove unused dependencies
           apt:
             autoremove: yes
       when: ansible_os_family == "Debian"
       register: apt_update
+    # Handle RedHat/CentOS systems
     - name: Update YUM packages (CentOS/RHEL)
       block:
+        # Ensure package cache is up to date
         - name: Update YUM cache
           yum:
             update_cache: yes
+        # Upgrade YUM packages
         - name: Upgrade YUM packages
           yum:
             name: "*"
             state: latest
             update_cache: yes
+        # Clean YUM cache
         - name: Clean YUM cache
           yum:
             clean: all
       when: ansible_os_family == "RedHat"
       register: yum_update
+    # Reboot handling for Debian systems
     - name: Reboot system if required (Debian/Ubuntu)
       reboot:
         msg: "Reboot required after system update"
+        # Allow 5 minutes for reboot and reconnection
         connect_timeout: 5
         reboot_timeout: 300
         pre_reboot_delay: 0
@@ -47,9 +60,11 @@
       when:
         - ansible_os_family == "Debian"
         - apt_update.changed
+    # Reboot handling for RedHat systems
     - name: Reboot system if required (CentOS/RHEL)
       reboot:
         msg: "Reboot required after system update"
+        # Allow 5 minutes for reboot and reconnection
         connect_timeout: 5
         reboot_timeout: 300
         pre_reboot_delay: 0

@@ -1,11 +1,16 @@
+# This playbook creates and maintains system documentation by gathering system information
+# and creating structured documentation files in a designated directory
+
 - name: Maintain System Documentation
   hosts: localhost
   become: true
+  # Define variables for documentation directory and ownership
   vars:
     docs_path: /var/system_docs
     docs_owner: root
     docs_group: root
   tasks:
+    # Create base directory for documentation storage
     - name: Ensure documentation directory exists
       file:
         path: "{{ docs_path }}"
@@ -13,6 +18,8 @@
         mode: '0755'
         owner: "{{ docs_owner }}"
         group: "{{ docs_group }}"
+    # Collect and store basic system information including kernel version,
+    # distribution details, and OS release information
     - name: Gather system information
       shell: |
         echo "System Information" > {{ docs_path }}/system_info.txt
@@ -21,6 +28,8 @@
       args:
         executable: /bin/bash
         creates: "{{ docs_path }}/system_info.txt"
+    # Create a markdown index file that serves as documentation homepage
+    # and provides navigation to other documentation files
     - name: Create documentation index
       copy:
         dest: "{{ docs_path }}/index.md"
@@ -35,6 +44,8 @@
         mode: '0644'
         owner: "{{ docs_owner }}"
         group: "{{ docs_group }}"
+    # Generate inventory file using a custom template
+    # This task is allowed to fail (ignore_errors) if template is missing
     - name: Create system inventory file
       template:
         src: inventory_template.j2
