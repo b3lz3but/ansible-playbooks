@@ -1,0 +1,88 @@
+- name: Manage Cloud Resources
+  hosts: localhost
+  gather_facts: true
+  vars:
+    cloud_provider: "{{ provider | default('aws') }}" # Options: aws, azure, gcp
+  tasks:
+    - name: Verify selected provider
+      fail:
+        msg: "Invalid provider. Choose 'aws', 'azure', or 'gcp'"
+      when: cloud_provider not in ['aws', 'azure', 'gcp']
+      tags: ['always']
+    # AWS Tasks
+    - name: Check if AWS CLI is installed
+      command: which aws
+      register: aws_check
+      ignore_errors: true
+      when: cloud_provider == 'aws'
+      tags: ['aws']
+    - name: Install AWS CLI
+      package:
+        name: awscli
+        state: present
+      when: cloud_provider == 'aws' and aws_check.rc != 0
+      become: true
+      tags: ['aws', 'setup']
+    # Azure Tasks
+    - name: Check if Azure CLI is installed
+      command: which az
+      register: az_check
+      ignore_errors: true
+      when: cloud_provider == 'azure'
+      tags: ['azure']
+    - name: Install Azure CLI
+      package:
+        name: azure-cli
+        state: present
+      when: cloud_provider == 'azure' and az_check.rc != 0
+      become: true
+      tags: ['azure', 'setup']
+    # GCP Tasks
+    - name: Check if GCloud SDK is installed
+      command: which gcloud
+      register: gcloud_check
+      ignore_errors: true
+      when: cloud_provider == 'gcp'
+      tags: ['gcp']
+    - name: Install Google Cloud SDK
+      package:
+        name: google-cloud-sdk
+        state: present
+      when: cloud_provider == 'gcp' and gcloud_check.rc != 0
+      become: true
+      tags: ['gcp', 'setup']
+    # Provider-specific operations
+    - name: AWS Operations
+      block:
+        - name: Verify AWS credentials
+          command: aws sts get-caller-identity
+          register: aws_identity
+        - name: List EC2 instances
+          command: aws ec2 describe-instances
+          register: cloud_resources
+      when: cloud_provider == 'aws'
+      tags: ['aws']
+    - name: Azure Operations
+      block:
+        - name: Verify Azure login
+          command: az account show
+          register: azure_identity
+        - name: List Azure VMs
+          command: az vm list
+          register: cloud_resources
+      when: cloud_provider == 'azure'
+      tags: ['azure']
+    - name: GCP Operations
+      block:
+        - name: Verify GCP auth
+          command: gcloud auth list
+          register: gcp_identity
+        - name: List GCP instances
+          command: gcloud compute instances list
+          register: cloud_resources
+      when: cloud_provider == 'gcp'
+      tags: ['gcp']
+    - name: Show cloud resources
+      debug:
+        var: cloud_resources.stdout_lines
+      tags: ['always']

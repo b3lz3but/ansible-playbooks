@@ -1,0 +1,32 @@
+System Inventory
+===============
+
+Hostname: {{ ansible_hostname }}
+FQDN: {{ ansible_fqdn }}
+
+CPU Information:
+---------------
+Processor: {{ ansible_processor[2] }}
+CPU Cores: {{ ansible_processor_cores }}
+CPU Count: {{ ansible_processor_count }}
+
+Memory Information:
+-----------------
+Total Memory: {{ ansible_memtotal_mb }}MB
+
+Storage Information:
+------------------
+{% for mount in ansible_mounts %}
+Mount: {{ mount.mount }}
+Device: {{ mount.device }}
+Size: {{ mount.size_total | human_readable }}
+{% endfor %}
+
+Network Interfaces:
+-----------------
+{% for interface, value in ansible_interfaces|dictsort %}
+Interface: {{ interface }}
+{% if value.ipv4 is defined %}
+IP: {{ value.ipv4.address }}
+{% endif %}
+{% endfor %}

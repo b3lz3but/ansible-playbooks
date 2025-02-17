@@ -1,0 +1,59 @@
+- name: Update System Packages
+  hosts: all
+  become: true
+  gather_facts: true
+  pre_tasks:
+    - name: Check connectivity
+      ping:
+  tasks:
+    - name: Update APT cache and upgrade packages (Debian/Ubuntu)
+      block:
+        - name: Update APT cache
+          apt:
+            update_cache: yes
+            cache_valid_time: 3600
+        - name: Upgrade APT packages
+          apt:
+            upgrade: dist
+            autoremove: yes
+            autoclean: yes
+        - name: Remove unused dependencies
+          apt:
+            autoremove: yes
+      when: ansible_os_family == "Debian"
+      register: apt_update
+    - name: Update YUM packages (CentOS/RHEL)
+      block:
+        - name: Update YUM cache
+          yum:
+            update_cache: yes
+        - name: Upgrade YUM packages
+          yum:
+            name: "*"
+            state: latest
+            update_cache: yes
+        - name: Clean YUM cache
+          yum:
+            clean: all
+      when: ansible_os_family == "RedHat"
+      register: yum_update
+    - name: Reboot system if required (Debian/Ubuntu)
+      reboot:
+        msg: "Reboot required after system update"
+        connect_timeout: 5
+        reboot_timeout: 300
+        pre_reboot_delay: 0
+        post_reboot_delay: 30
+      when:
+        - ansible_os_family == "Debian"
+        - apt_update.changed
+    - name: Reboot system if required (CentOS/RHEL)
+      reboot:
+        msg: "Reboot required after system update"
+        connect_timeout: 5
+        reboot_timeout: 300
+        pre_reboot_delay: 0
+        post_reboot_delay: 30
+      when:
+        - ansible_os_family == "RedHat"
+        - yum_update.changed

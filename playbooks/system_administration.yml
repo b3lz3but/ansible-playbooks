@@ -1,0 +1,63 @@
+- name: System Administration Tasks
+  hosts: all
+  become: true
+  tasks:
+    - name: Update package cache (apt)
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+      when: ansible_os_family == "Debian"
+    - name: Update package cache (yum)
+      yum:
+        update_cache: yes
+      when: ansible_os_family == "RedHat"
+    - name: Ensure essential system packages are installed (apt)
+      apt:
+        name:
+          - vim
+          - curl
+          - wget
+          - net-tools
+          - htop
+          - tmux
+          - iotop
+          - git
+          - rsync
+          - tree
+        state: present
+      when: ansible_os_family == "Debian"
+      register: apt_install_result
+      ignore_errors: true
+    - name: Ensure essential system packages are installed (yum)
+      yum:
+        name:
+          - vim
+          - curl
+          - wget
+          - net-tools
+          - htop
+          - tmux
+          - iotop
+          - git
+          - rsync
+          - tree
+        state: present
+      when: ansible_os_family == "RedHat"
+      register: yum_install_result
+      ignore_errors: true
+    - name: Perform system upgrade (apt)
+      apt:
+        upgrade: dist
+        update_cache: yes
+      when: ansible_os_family == "Debian"
+      register: apt_upgrade_result
+    - name: Perform system upgrade (yum)
+      yum:
+        name: '*'
+        state: latest
+      when: ansible_os_family == "RedHat"
+      register: yum_upgrade_result
+    - name: Log package installation failures
+      debug:
+        msg: "Package installation failed on {{ inventory_hostname }}"
+      when: (apt_install_result.failed is defined and apt_install_result.failed) or (yum_install_result.failed is defined and yum_install_result.failed)

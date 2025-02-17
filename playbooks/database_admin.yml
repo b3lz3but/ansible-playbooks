@@ -1,0 +1,99 @@
+- name: Database Administration
+  hosts: all
+  become: true
+  vars:
+    mysql_root_password: "{{ vault_mysql_root_password }}"
+    backup_dir: /backup/mysql
+    backup_retention_days: 7
+    mysql_config:
+      max_connections: 150
+      innodb_buffer_pool_size: 1G
+      query_cache_size: 32M
+  tasks:
+    - name: Install MySQL packages
+      apt:
+        name:
+          - mysql-server
+          - python3-mysqldb
+        state: present
+        update_cache: yes
+      when: ansible_os_family == "Debian"
+    - name: Secure MySQL installation
+      mysql_user:
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+        check_implicit_admin: true
+        user: root
+        host_all: true
+        password: "{{ mysql_root_password }}"
+        update_password: always
+    - name: Remove anonymous users
+      mysql_user:
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+        user: ""
+        host_all: true
+        state: absent
+    - name: Optimize MySQL configuration
+      template:
+        src: mysql_optimization.cnf.j2
+        dest: /etc/mysql/conf.d/optimization.cnf
+        owner: root
+        group: root
+        mode: '0644'
+      notify: Restart MySQL
+    - name: Ensure backup directory exists
+      file:
+        path: "{{ backup_dir }}"
+        state: directory
+        mode: '0750'
+        owner: mysql
+        group: mysql
+    - name: Backup MySQL databases
+      mysql_db:
+        state: dump
+        name: all
+        target: "{{ backup_dir }}/mysql_backup_{{ ansible_date_time.date }}.sql"
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+      register: backup_result
+      ignore_errors: true
+    - name: Compress backup file
+      archive:
+        path: "{{ backup_dir }}/mysql_backup_{{ ansible_date_time.date }}.sql"
+        dest: "{{ backup_dir }}/mysql_backup_{{ ansible_date_time.date }}.sql.gz"
+        remove: true
+      when: backup_result is success
+    - name: Verify backup integrity
+      shell: "gunzip -t {{ backup_dir }}/mysql_backup_{{ ansible_date_time.date }}.sql.gz"
+      register: verify_result
+      failed_when: verify_result.rc != 0
+      when: backup_result is success
+    - name: Remove old backups
+      shell: "find {{ backup_dir }} -name 'mysql_backup_*.sql' -mtime +{{ backup_retention_days }} -delete"
+      when: backup_result is success
+    - name: Install monitoring tools
+      apt:
+        name:
+          - mytop
+          - percona-toolkit
+        state: present
+      when: ansible_os_family == "Debian"
+    - name: Setup MySQL monitoring
+      template:
+        src: mysql_monitoring.cnf.j2
+        dest: /etc/mysql/conf.d/monitoring.cnf
+        owner: root
+        group: root
+        mode: '0644'
+    - name: Send notification
+      mail:
+        to: "{{ dba_email }}"
+        subject: "MySQL Backup Status on {{ inventory_hostname }}"
+        body: "Backup status: {{ 'Success' if backup_result is success else 'Failed' }}\nVerification: {{ 'Passed' if verify_result.rc == 0 else 'Failed' }}"
+      when: dba_email is defined
+  handlers:
+    - name: Restart MySQL
+      service:
+        name: mysql
+        state: restarted

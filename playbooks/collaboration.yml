@@ -1,0 +1,47 @@
+- name: Enable Collaboration with Development Teams
+  hosts: all
+  become: true
+  vars:
+    git_config:
+      user.name: "{{ git_username | default('Team Developer') }}"
+      user.email: "{{ git_email | default('team@example.com') }}"
+  tasks:
+    - name: Install collaboration packages (Debian)
+      apt:
+        name:
+          - git
+          - meld
+          - vim
+          - tmux
+        state: present
+        update_cache: yes
+      when: ansible_os_family == "Debian"
+    - name: Install collaboration packages (RedHat)
+      yum:
+        name:
+          - git
+          - meld
+          - vim
+          - tmux
+        state: present
+      when: ansible_os_family == "RedHat"
+    - name: Configure Git globally
+      git_config:
+        name: "{{ item.key }}"
+        value: "{{ item.value }}"
+        scope: global
+      loop: "{{ git_config | dict2items }}"
+    - name: Create SSH directory
+      file:
+        path: ~/.ssh
+        state: directory
+        mode: '0700'
+    - name: Configure Git SSH settings
+      lineinfile:
+        path: ~/.ssh/config
+        create: yes
+        mode: '0600'
+        line: |
+          Host *
+            StrictHostKeyChecking accept-new
+            HashKnownHosts yes

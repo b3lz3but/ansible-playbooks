@@ -1,0 +1,48 @@
+- name: Enhanced System Troubleshooting
+  hosts: all
+  gather_facts: true
+  tasks:
+    - name: Check system logs for errors
+      command: journalctl -p 3 -xb --no-pager -n 50
+      register: logs_output
+      ignore_errors: true
+    - name: Check disk space
+      shell: df -h
+      register: disk_space
+      ignore_errors: true
+    - name: Check memory usage
+      shell: free -m
+      register: memory_usage
+      ignore_errors: true
+    - name: Check system load
+      shell: uptime
+      register: system_load
+      ignore_errors: true
+    - name: Check network connectivity
+      ping:
+        dest: "8.8.8.8"
+      register: network_check
+      ignore_errors: true
+    - name: Check critical services status
+      service_facts:
+      register: service_status
+      ignore_errors: true
+    - name: Display system status report
+      debug:
+        msg: |
+          System Status Report
+          ===================
+          Disk Space:
+          {{ disk_space.stdout_lines | default(['No data available']) | join('\n') }}
+
+          Memory Usage:
+          {{ memory_usage.stdout_lines | default(['No data available']) | join('\n') }}
+
+          System Load:
+          {{ system_load.stdout_lines | default(['No data available']) | join('\n') }}
+
+          Network Status:
+          {{ network_check.ping | default('Network check failed') }}
+
+          Recent System Errors:
+          {{ logs_output.stdout_lines | default(['No errors found']) | join('\n') }}

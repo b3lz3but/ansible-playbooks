@@ -1,0 +1,45 @@
+- name: Maintain System Documentation
+  hosts: localhost
+  become: true
+  vars:
+    docs_path: /var/system_docs
+    docs_owner: root
+    docs_group: root
+  tasks:
+    - name: Ensure documentation directory exists
+      file:
+        path: "{{ docs_path }}"
+        state: directory
+        mode: '0755'
+        owner: "{{ docs_owner }}"
+        group: "{{ docs_group }}"
+    - name: Gather system information
+      shell: |
+        echo "System Information" > {{ docs_path }}/system_info.txt
+        uname -a >> {{ docs_path }}/system_info.txt
+        lsb_release -a >> {{ docs_path }}/system_info.txt 2>/dev/null || cat /etc/os-release >> {{ docs_path }}/system_info.txt
+      args:
+        executable: /bin/bash
+        creates: "{{ docs_path }}/system_info.txt"
+    - name: Create documentation index
+      copy:
+        dest: "{{ docs_path }}/index.md"
+        content: |
+          # System Documentation
+
+          This directory contains system documentation and configuration details.
+
+          ## Contents
+          - system_info.txt: Basic system information
+          - inventory.txt: System inventory
+        mode: '0644'
+        owner: "{{ docs_owner }}"
+        group: "{{ docs_group }}"
+    - name: Create system inventory file
+      template:
+        src: inventory_template.j2
+        dest: "{{ docs_path }}/inventory.txt"
+        mode: '0644'
+        owner: "{{ docs_owner }}"
+        group: "{{ docs_group }}"
+      ignore_errors: true

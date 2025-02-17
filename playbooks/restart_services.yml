@@ -1,0 +1,76 @@
+- name: Restart Essential Services
+  hosts: all
+  become: true
+  pre_tasks:
+    - name: Check if services exist
+      stat:
+        path: "/etc/init.d/{{ item }}"
+      register: service_status
+      loop:
+        - nginx
+        - apache2
+        - mysql
+      ignore_errors: true
+  handlers:
+    - name: restart nginx
+      service:
+        name: nginx
+        state: restarted
+      listen: "restart nginx service"
+    - name: restart apache
+      service:
+        name: apache2
+        state: restarted
+      listen: "restart apache service"
+    - name: restart mysql
+      service:
+        name: mysql
+        state: restarted
+      listen: "restart mysql service"
+  tasks:
+    - name: Restart Nginx if exists
+      block:
+        - name: Check Nginx status
+          service:
+            name: nginx
+            state: started
+          notify: "restart nginx service"
+      when: service_status.results[0].stat.exists
+      rescue:
+        - name: Log Nginx restart failure
+          debug:
+            msg: "Failed to restart Nginx service"
+    - name: Restart Apache if exists
+      block:
+        - name: Check Apache status
+          service:
+            name: apache2
+            state: started
+          notify: "restart apache service"
+      when: service_status.results[1].stat.exists
+      rescue:
+        - name: Log Apache restart failure
+          debug:
+            msg: "Failed to restart Apache service"
+    - name: Restart MySQL if exists
+      block:
+        - name: Check MySQL status
+          service:
+            name: mysql
+            state: started
+          notify: "restart mysql service"
+      when: service_status.results[2].stat.exists
+      rescue:
+        - name: Log MySQL restart failure
+          debug:
+            msg: "Failed to restart MySQL service"
+    - name: Verify services status
+      service_facts:
+    - name: Display service status
+      debug:
+        msg: "{{ item }} is {{ ansible_facts.services[item + '.service'].state }}"
+      loop:
+        - nginx
+        - apache2
+        - mysql
+      when: ansible_facts.services[item + '.service'] is defined

@@ -1,0 +1,50 @@
+[DEFAULT]
+# IP addresses to never ban (localhost)
+ignoreip = 127.0.0.1/8 ::1
+# Ban duration in seconds (24 hours)
+bantime = 86400
+# Time window to count retries (10 minutes)
+findtime = 600
+# Number of failures before ban
+maxretry = 5
+# Action to take when banning (iptables)
+banaction = iptables-multiport
+
+# Notification configuration
+# Destination email for ban notifications
+destemail = root@localhost
+# Email sender address using hostname
+sender = root@{{ ansible_hostname }}
+# Mail transfer agent
+mta = sendmail
+
+# SSH protection configuration
+[sshd]
+enabled = true
+# Monitor both standard SSH port and custom port if defined
+port = ssh,22
+# Use sshd filter rules
+filter = sshd
+# SSH log file location
+logpath = /var/log/auth.log
+# More aggressive settings for SSH
+maxretry = 3
+findtime = 300
+bantime = 86400
+
+# Nginx authentication protection
+[nginx-http-auth]
+enabled = true
+filter = nginx-http-auth
+# Monitor both HTTP and HTTPS ports
+port = http,https
+# Nginx error log location
+logpath = /var/log/nginx/error.log
+
+# PHP URL fopen protection against URL inclusion attacks
+[php-url-fopen]
+enabled = true
+port = http,https
+filter = php-url-fopen
+# Nginx access log location
+logpath = /var/log/nginx/access.log

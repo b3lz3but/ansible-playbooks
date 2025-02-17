@@ -1,0 +1,41 @@
+- name: Backup Important Files
+  hosts: all
+  become: true
+  vars:
+    backup_timestamp: "{{ ansible_date_time.iso8601 | regex_replace(':', '') }}"
+    backup_root: /backup
+    max_backups: 5
+  tasks:
+    - name: Create backup directory with timestamp
+      file:
+        path: "{{ backup_root }}/{{ backup_timestamp }}"
+        state: directory
+        mode: '0755'
+      register: backup_dir
+    - name: Copy /etc configs
+      synchronize:
+        src: /etc/
+        dest: "{{ backup_dir.path }}/"
+        archive: yes
+        checksum: yes
+      register: sync_result
+      ignore_errors: true
+    - name: Verify backup integrity
+      command: "find {{ backup_dir.path }} -type f -exec md5sum {} \\;"
+      register: backup_checksums
+      when: sync_result is success
+    - name: Save backup checksums
+      copy:
+        content: "{{ backup_checksums.stdout }}"
+        dest: "{{ backup_dir.path }}/CHECKSUM.md5"
+      when: backup_checksums is defined
+    - name: Remove old backups
+      shell: |
+        cd {{ backup_root }} && \
+        ls -1t | tail -n +{{ max_backups + 1 }} | xargs -r rm -rf
+      when: backup_dir.changed
+    - name: Log backup completion
+      local_action:
+        module: logger
+        msg: "Backup completed on {{ inventory_hostname }} at {{ backup_timestamp }}"
+        priority: info

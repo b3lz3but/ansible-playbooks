@@ -1,0 +1,38 @@
+- name: Comprehensive Network Connectivity Check
+  hosts: all
+  gather_facts: true
+  vars:
+    test_hosts:
+      - host: "8.8.8.8"
+        description: "Google DNS"
+      - host: "1.1.1.1"
+        description: "Cloudflare DNS"
+  tasks:
+    - name: IPv4 Ping Test
+      ping:
+        host: "{{ item.host }}"
+        count: 4
+      register: ping_result
+      ignore_errors: true
+      with_items: "{{ test_hosts }}"
+    - name: DNS Resolution Check
+      command: nslookup google.com
+      register: dns_result
+      ignore_errors: true
+    - name: HTTP Connectivity Test
+      uri:
+        url: https://www.google.com
+        return_content: no
+        validate_certs: yes
+      register: http_result
+      ignore_errors: true
+    - name: Display Network Test Results
+      debug:
+        msg: |
+          Network Test Summary:
+          IPv4 Ping Results: {{ ping_result.results | map(attribute='ping_stats') | list }}
+          DNS Resolution: {{ dns_result.rc == 0 }}
+          HTTP Connectivity: {{ http_result.status == 200 }}
+      failed_when: >
+        ping_result.results | map(attribute='ping_stats.packet_loss_percentage') | list | max > 50 or dns_result.rc != 0 or http_result.status != 200
+

@@ -1,0 +1,49 @@
+- name: Automate Basic Tasks with Scripts
+  hosts: all
+  become: true
+  tasks:
+    - name: Create log directory
+      file:
+        path: /var/log/cleanup
+        state: directory
+        mode: '0755'
+    - name: Create enhanced cleanup script
+      copy:
+        dest: /usr/local/bin/cleanup.sh
+        content: |
+          #!/bin/bash
+
+          # Set error handling
+          set -e
+
+          # Configure logging
+          LOG_FILE="/var/log/cleanup/cleanup-$(date +%Y%m%d).log"
+
+          echo "Starting cleanup operation at $(date)" >> "$LOG_FILE"
+
+          # Create backup of tmp directory
+          if [ -d "/tmp" ]; then
+            BACKUP_DIR="/var/backups/tmp-$(date +%Y%m%d_%H%M%S)"
+            mkdir -p "$BACKUP_DIR"
+            cp -r /tmp/* "$BACKUP_DIR" 2>/dev/null || true
+            echo "Backup created at $BACKUP_DIR" >> "$LOG_FILE"
+          fi
+
+          # Safely clean temporary files
+          find /tmp -type f -mtime +7 -delete 2>> "$LOG_FILE"
+          find /tmp -type d -empty -delete 2>> "$LOG_FILE"
+
+          echo "Cleanup completed at $(date)" >> "$LOG_FILE"
+        mode: '0755'
+    - name: Create cleanup log rotation
+      copy:
+        dest: /etc/logrotate.d/cleanup
+        content: |
+          /var/log/cleanup/*.log {
+            weekly
+            rotate 4
+            compress
+            missingok
+            notifempty
+          }
+        mode: '0644'

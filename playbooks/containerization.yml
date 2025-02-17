@@ -1,0 +1,115 @@
+- name: Containerization with Docker and Kubernetes
+  hosts: all
+  become: true
+  vars:
+    docker_daemon_config:
+      exec-opts: ["native.cgroupdriver=systemd"]
+      log-driver: "json-file"
+      log-opts:
+        max-size: "100m"
+      storage-driver: "overlay2"
+  pre_tasks:
+    - name: Check system requirements
+      assert:
+        that:
+          - ansible_memory_mb.real.total >= 2048
+          - ansible_architecture == "x86_64"
+        msg: "System requirements not met. Need at least 2GB RAM and x86_64 architecture."
+  tasks:
+    - name: Add Docker GPG key
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+      when: ansible_os_family == "Debian"
+    - name: Add Docker repository
+      apt_repository:
+        repo: deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable
+        state: present
+      when: ansible_os_family == "Debian"
+    - name: Install Docker dependencies
+      apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - software-properties-common
+        state: present
+        update_cache: yes
+      when: ansible_os_family == "Debian"
+    - name: Install Docker
+      apt:
+        name: docker-ce
+        state: present
+      when: ansible_os_family == "Debian"
+      notify: restart docker
+    - name: Configure Docker daemon
+      copy:
+        content: "{{ docker_daemon_config | to_nice_json }}"
+        dest: /etc/docker/daemon.json
+        mode: '0644'
+      notify: restart docker
+    - name: Disable swap
+      command: swapoff -a
+      when: ansible_swaptotal_mb > 0
+    - name: Remove swap from fstab
+      lineinfile:
+        path: /etc/fstab
+        regexp: '^([^#].*?\sswap\s+sw\s+.*)$'
+        line: '# \1'
+        backrefs: yes
+    - name: Add Kubernetes GPG key
+      apt_key:
+        url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
+        state: present
+      when: ansible_os_family == "Debian"
+    - name: Add Kubernetes repository
+      apt_repository:
+        repo: deb https://apt.kubernetes.io/ kubernetes-xenial main
+        state: present
+      when: ansible_os_family == "Debian"
+    - name: Install Kubernetes tools
+      apt:
+        name:
+          - kubectl
+          - kubeadm
+          - kubelet
+        state: present
+        update_cache: yes
+      when: ansible_os_family == "Debian"
+      notify: restart kubelet
+    - name: Configure kernel modules for Kubernetes
+      modprobe:
+        name: "{{ item }}"
+        state: present
+      with_items:
+        - br_netfilter
+        - overlay
+    - name: Configure sysctl parameters
+      sysctl:
+        name: "{{ item.name }}"
+        value: "{{ item.value }}"
+        state: present
+        sysctl_file: /etc/sysctl.d/k8s.conf
+      with_items:
+        - {name: 'net.bridge.bridge-nf-call-iptables', value: '1'}
+        - {name: 'net.ipv4.ip_forward', value: '1'}
+        - {name: 'net.bridge.bridge-nf-call-ip6tables', value: '1'}
+    - name: Enable Docker service
+      service:
+        name: docker
+        state: started
+        enabled: yes
+    - name: Enable Kubelet service
+      service:
+        name: kubelet
+        state: started
+        enabled: yes
+  handlers:
+    - name: restart docker
+      service:
+        name: docker
+        state: restarted
+    - name: restart kubelet
+      service:
+        name: kubelet
+        state: restarted

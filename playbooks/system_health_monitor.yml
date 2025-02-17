@@ -1,0 +1,48 @@
+- name: Monitor System Health
+  hosts: all
+  gather_facts: true
+  vars:
+    cpu_threshold: 80
+    memory_threshold: 90
+    disk_threshold: 85
+  tasks:
+    - name: Get CPU Load
+      shell: "cat /proc/loadavg | awk '{print $1,$2,$3}'"
+      register: cpu_load
+      ignore_errors: true
+    - name: Get Memory Usage
+      shell: "free | grep Mem | awk '{print $3/$2 * 100.0}'"
+      register: memory_usage
+      ignore_errors: true
+    - name: Get Disk Usage
+      shell: "df -h / | tail -n 1 | awk '{print $5}' | cut -d'%' -f1"
+      register: disk_usage
+      ignore_errors: true
+    - name: Get System Uptime
+      shell: "uptime -p"
+      register: system_uptime
+      ignore_errors: true
+    - name: Collect System Status
+      set_fact:
+        system_status:
+          cpu: "{{ cpu_load.stdout | default('N/A') }}"
+          memory: "{{ memory_usage.stdout | default('N/A') | float | round(2) }}"
+          disk: "{{ disk_usage.stdout | default('N/A') }}"
+          uptime: "{{ system_uptime.stdout | default('N/A') }}"
+    - name: Display System Health Report
+      debug:
+        msg: |
+          System Health Report for {{ inventory_hostname }}
+          =============================================
+          Uptime: {{ system_status.uptime }}
+          CPU Load (1,5,15 min): {{ system_status.cpu }}
+          Memory Usage: {{ system_status.memory }}%
+          Disk Usage: {{ system_status.disk }}%
+    - name: Alert on High Resource Usage
+      debug:
+        msg: "WARNING: {{ item.resource }} usage is above threshold ({{ item.value }}%)"
+      when: item.value | float > item.threshold
+      loop:
+        - {resource: "Memory", value: "{{ system_status.memory }}", threshold: "{{ memory_threshold }}"}
+        - {resource: "Disk", value: "{{ system_status.disk }}", threshold: "{{ disk_threshold }}"}
+      ignore_errors: true

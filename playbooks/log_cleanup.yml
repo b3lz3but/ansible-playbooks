@@ -1,0 +1,44 @@
+- name: Log Files Cleanup
+  hosts: all
+  become: true
+  vars:
+    log_retention_days: 30
+    log_size_limit_mb: 100
+    backup_enabled: true
+    backup_path: "/var/backup/logs"
+    log_patterns:
+      - "*.log"
+      - "*.gz"
+  tasks:
+    - name: Create backup directory if enabled
+      file:
+        path: "{{ backup_path }}"
+        state: directory
+        mode: '0755'
+      when: backup_enabled
+    - name: Find old log files
+      find:
+        paths: /var/log
+        age: "{{ log_retention_days }}d"
+        recurse: yes
+        patterns: "{{ log_patterns }}"
+        size: "{{ log_size_limit_mb }}m"
+      register: logs_found
+    - name: Backup old logs if enabled
+      archive:
+        path: "{{ item.path }}"
+        dest: "{{ backup_path }}/{{ ansible_date_time.date }}_{{ item.path | basename }}.tar.gz"
+      with_items: "{{ logs_found.files }}"
+      when: backup_enabled
+      ignore_errors: true
+    - name: Remove old log files
+      file:
+        path: "{{ item.path }}"
+        state: absent
+      with_items: "{{ logs_found.files }}"
+      register: cleanup_result
+    - name: Log cleanup operation
+      lineinfile:
+        path: /var/log/cleanup_history.log
+        line: "{{ ansible_date_time.iso8601 }} - Removed {{ cleanup_result.results | length }} files"
+        create: yes

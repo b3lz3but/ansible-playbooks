@@ -1,0 +1,59 @@
+- name: Setup CI/CD Pipeline
+  hosts: all
+  become: true
+  
+  handlers:
+    - name: restart jenkins
+      service:
+        name: jenkins
+        state: restarted
+
+  tasks:
+    - name: Update package cache
+      package:
+        update_cache: yes
+      when: ansible_os_family == "Debian"
+
+    - name: Install Java
+      package:
+        name: openjdk-11-jdk
+        state: present
+      when: ansible_os_family == "Debian"
+
+    - name: Add Jenkins apt key
+      apt_key:
+        url: https://pkg.jenkins.io/debian-stable/jenkins.io.key
+        state: present
+      when: ansible_os_family == "Debian"
+
+    - name: Add Jenkins repository
+      apt_repository:
+        repo: deb https://pkg.jenkins.io/debian-stable binary/
+        state: present
+      when: ansible_os_family == "Debian"
+
+    - name: Install Jenkins
+      package:
+        name: jenkins
+        state: present
+      notify: restart jenkins
+
+    - name: Start Jenkins service
+      service:
+        name: jenkins
+        state: started
+        enabled: yes
+
+    - name: Wait for Jenkins to start
+      wait_for:
+        port: 8080
+        timeout: 60
+
+    - name: Get initial admin password
+      command: cat /var/lib/jenkins/secrets/initialAdminPassword
+      register: jenkins_password
+      changed_when: false
+
+    - name: Display Jenkins initial admin password
+      debug:
+        var: jenkins_password.stdout

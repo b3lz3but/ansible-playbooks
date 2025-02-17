@@ -1,0 +1,82 @@
+- name: Install and Configure Monitoring & Logging Tools
+  hosts: all
+  become: true
+  vars:
+    prometheus_version: 2.42.0
+    grafana_version: 9.4.7
+  tasks:
+    - name: Add Grafana GPG key (Debian)
+      apt_key:
+        url: https://packages.grafana.com/gpg.key
+        state: present
+      when: ansible_os_family == "Debian"
+      tags: grafana
+    - name: Install monitoring tools (Debian)
+      apt:
+        name:
+          - prometheus
+          - prometheus-node-exporter
+          - grafana
+          - filebeat
+        state: present
+        update_cache: yes
+      when: ansible_os_family == "Debian"
+      notify:
+        - restart prometheus
+        - restart node_exporter
+        - restart grafana
+      tags: install
+    - name: Install monitoring tools (RedHat)
+      yum:
+        name:
+          - prometheus
+          - prometheus-node-exporter
+          - grafana
+          - filebeat
+        state: present
+      when: ansible_os_family == "RedHat"
+      notify:
+        - restart prometheus
+        - restart node_exporter
+        - restart grafana
+      tags: install
+    - name: Configure Prometheus
+      template:
+        src: prometheus.yml.j2
+        dest: /etc/prometheus/prometheus.yml
+      notify: restart prometheus
+      tags: config
+    - name: Configure Filebeat
+      template:
+        src: filebeat.yml.j2
+        dest: /etc/filebeat/filebeat.yml
+      notify: restart filebeat
+      tags: config
+    - name: Ensure services are running
+      service:
+        name: "{{ item }}"
+        state: started
+        enabled: yes
+      loop:
+        - prometheus
+        - prometheus-node-exporter
+        - grafana-server
+        - filebeat
+      tags: services
+  handlers:
+    - name: restart prometheus
+      service:
+        name: prometheus
+        state: restarted
+    - name: restart node_exporter
+      service:
+        name: prometheus-node-exporter
+        state: restarted
+    - name: restart grafana
+      service:
+        name: grafana-server
+        state: restarted
+    - name: restart filebeat
+      service:
+        name: filebeat
+        state: restarted

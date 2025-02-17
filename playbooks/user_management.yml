@@ -1,0 +1,40 @@
+- name: Create User and Configure SSH Access
+  hosts: all
+  become: true
+  vars:
+    user_name: devops
+    user_shell: /bin/bash
+    user_password: "{{ vault_user_password }}" # Store in ansible-vault
+    user_groups:
+      - sudo
+      - docker
+    ssh_key_path: files/ssh_key.pub
+  tasks:
+    - name: Ensure groups exist
+      group:
+        name: "{{ item }}"
+        state: present
+      loop: "{{ user_groups }}"
+    - name: Create user account
+      user:
+        name: "{{ user_name }}"
+        password: "{{ user_password | password_hash('sha512') }}"
+        shell: "{{ user_shell }}"
+        groups: "{{ user_groups | join(',') }}"
+        append: yes
+        state: present
+      register: user_creation
+    - name: Set up authorized SSH key
+      authorized_key:
+        user: "{{ user_name }}"
+        state: present
+        key: "{{ lookup('file', ssh_key_path) }}"
+      when: user_creation is success
+    - name: Configure SSH directory permissions
+      file:
+        path: "/home/{{ user_name }}/.ssh"
+        state: directory
+        mode: '0700'
+        owner: "{{ user_name }}"
+        group: "{{ user_name }}"
+      when: user_creation is success

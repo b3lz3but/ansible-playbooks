@@ -1,0 +1,71 @@
+- name: Security Hardening
+  hosts: all
+  become: true
+  tasks:
+    - name: Install security packages
+      package:
+        name:
+          - fail2ban
+          - ufw
+          - libpam-pwquality
+          - auditd
+        state: present
+    - name: Configure SELinux (RedHat)
+      selinux:
+        policy: targeted
+        state: enforcing
+      when: ansible_os_family == "RedHat"
+      register: selinux_config
+    - name: Configure AppArmor (Debian)
+      block:
+        - name: Install AppArmor
+          apt:
+            name: apparmor
+            state: present
+        - name: Enable AppArmor
+          service:
+            name: apparmor
+            state: started
+            enabled: yes
+      when: ansible_os_family == "Debian"
+    - name: Configure Fail2Ban
+      service:
+        name: fail2ban
+        state: started
+        enabled: yes
+    - name: Configure SSH
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: "{{ item.regexp }}"
+        line: "{{ item.line }}"
+      loop:
+        - {regexp: '^PermitRootLogin', line: 'PermitRootLogin no'}
+        - {regexp: '^PasswordAuthentication', line: 'PasswordAuthentication no'}
+        - {regexp: '^X11Forwarding', line: 'X11Forwarding no'}
+      notify: restart sshd
+    - name: Setup UFW firewall
+      ufw:
+        state: enabled
+        policy: deny
+        rule: allow
+        port: "{{ item }}"
+      loop:
+        - '22'
+        - '80'
+        - '443'
+    - name: Set password policies
+      lineinfile:
+        path: /etc/security/pwquality.conf
+        regexp: "{{ item.regexp }}"
+        line: "{{ item.line }}"
+      loop:
+        - {regexp: '^minlen', line: 'minlen = 12'}
+        - {regexp: '^dcredit', line: 'dcredit = -1'}
+        - {regexp: '^ucredit', line: 'ucredit = -1'}
+        - {regexp: '^lcredit', line: 'lcredit = -1'}
+        - {regexp: '^ocredit', line: 'ocredit = -1'}
+  handlers:
+    - name: restart sshd
+      service:
+        name: sshd
+        state: restarted

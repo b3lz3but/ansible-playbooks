@@ -1,0 +1,62 @@
+- name: Enhanced Security Scan and Hardening
+  hosts: all
+  become: true
+  tasks:
+    - name: Update System Packages
+      apt:
+        update_cache: yes
+        upgrade: yes
+      when: ansible_os_family == "Debian"
+      ignore_errors: true
+    - name: Install Security Tools
+      package:
+        name:
+          - clamav
+          - rkhunter
+          - fail2ban
+          - ufw
+        state: present
+    - name: Update ClamAV Signatures
+      command: freshclam
+      ignore_errors: true
+    - name: Configure UFW
+      ufw:
+        state: enabled
+        policy: deny
+        logging: on
+    - name: Allow SSH
+      ufw:
+        rule: allow
+        port: ssh
+        proto: tcp
+    - name: Configure fail2ban
+      template:
+        src: jail.local.j2
+        dest: /etc/fail2ban/jail.local
+      notify: restart fail2ban
+    - name: Run RKHunter Check
+      command: rkhunter --check --skip-keypress
+      register: rkhunter_results
+      ignore_errors: true
+    - name: Scan Home Directory for Viruses
+      command: clamscan -r /home --log=/var/log/clamav/scan.log
+      register: scan_results
+      ignore_errors: true
+    - name: Check Open Ports
+      shell: ss -tulnp
+      register: open_ports
+      changed_when: false
+    - name: Generate Security Report
+      template:
+        src: security_report.j2
+        dest: /var/log/security_scan_report.txt
+      vars:
+        scan_data:
+          clamav: "{{ scan_results }}"
+          rkhunter: "{{ rkhunter_results }}"
+          open_ports: "{{ open_ports }}"
+  handlers:
+    - name: restart fail2ban
+      service:
+        name: fail2ban
+        state: restarted
