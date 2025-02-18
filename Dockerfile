@@ -9,9 +9,10 @@ ENV ANSIBLE_HOST_KEY_CHECKING=False
 ENV ANSIBLE_FORCE_COLOR=1
 ENV PYTHONUNBUFFERED=1
 
-# Install required packages
+# Install required packages, including Cockpit
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    ansible sshpass dialog whiptail python3 python3-pip git cockpit \
+    ansible sshpass dialog whiptail python3 python3-pip git \
+    cockpit cockpit-bridge cockpit-dashboard cockpit-networkmanager \
     && rm -rf /var/lib/apt/lists/*
 
 # Create ansible user
@@ -31,8 +32,8 @@ RUN chmod +x /ansible/interactive_ansible.sh && chown ansible:ansible /ansible/i
 # Set working directory
 WORKDIR /ansible
 
-# Expose Cockpit web interface
+# Expose Cockpit Web UI port
 EXPOSE 9090
 
-# Start Cockpit service automatically
-CMD ["/usr/sbin/cockpit-ws"]
+# Enable Cockpit service and keep the container running
+CMD ["bash", "-c", "systemctl enable --now cockpit && systemctl restart cockpit && tail -f /dev/null"]
