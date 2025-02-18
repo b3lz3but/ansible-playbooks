@@ -12,7 +12,7 @@ ENV PYTHONUNBUFFERED=1
 # Install required packages, including Cockpit
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ansible sshpass dialog whiptail python3 python3-pip git \
-    cockpit cockpit-bridge cockpit-system cockpit-networkmanager \
+    cockpit cockpit-ws cockpit-bridge cockpit-system cockpit-networkmanager \
     && rm -rf /var/lib/apt/lists/*
 
 # Create ansible user
@@ -35,5 +35,5 @@ WORKDIR /ansible
 # Expose Cockpit Web UI port
 EXPOSE 9090
 
-# Enable Cockpit service and keep the container running
-CMD ["bash", "-c", "systemctl enable --now cockpit && systemctl restart cockpit && tail -f /dev/null"]
+# Start Cockpit directly (without systemctl) in the foreground
+CMD ["/usr/lib/cockpit-ws"]
