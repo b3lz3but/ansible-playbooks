@@ -1,47 +1,38 @@
-# Use Ubuntu 22.04 as base image
+# Use Ubuntu as the base image
 FROM ubuntu:22.04
 
-# Add metadata
-LABEL maintainer="DevOps Team"
-LABEL description="Ansible control node container"
-
-# Prevent apt from prompting for input
-ENV DEBIAN_FRONTEND=noninteractive
+# Set environment variables
 ENV TERM=xterm
+ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=UTC
+ENV ANSIBLE_HOST_KEY_CHECKING=False
+ENV ANSIBLE_FORCE_COLOR=1
+ENV PYTHONUNBUFFERED=1
 
-# Pre-configure tzdata to avoid interactive prompt
-RUN ln -fs /usr/share/zoneinfo/UTC /etc/localtime \
-    && echo "UTC" > /etc/timezone
-
-# Install dependencies
+# Install required packages
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    ansible \
-    sshpass \
-    dialog \
-    whiptail \
-    python3 \
-    python3-pip \
-    git \
-    openssh-client \
-    tzdata \
-    && apt-get clean \
+    ansible sshpass dialog whiptail python3 python3-pip git ttyd \
     && rm -rf /var/lib/apt/lists/*
 
-# Create ansible user and fix permissions
+# Create ansible user
 RUN useradd -m -s /bin/bash ansible
+
+# Ensure correct directory structure
 RUN mkdir -p /ansible/playbooks && chown -R ansible:ansible /ansible
 
-# Copy interactive script with correct permissions
+# Copy necessary files
 COPY interactive_ansible.sh /ansible/interactive_ansible.sh
+COPY inventory.ini /ansible/inventory.ini
+COPY ansible.cfg /ansible/ansible.cfg
+
+# Ensure script has execution permissions
 RUN chmod +x /ansible/interactive_ansible.sh && chown ansible:ansible /ansible/interactive_ansible.sh
 
-# Ensure ansible.log is writable
-RUN touch /ansible/ansible.log && chown ansible:ansible /ansible/ansible.log
-
-# Switch to ansible user
-USER ansible
+# Set working directory
 WORKDIR /ansible
 
-# Ensure script executes on container start
-ENTRYPOINT ["/bin/bash", "/ansible/interactive_ansible.sh"]
+# Expose ttyd for web-based terminal access
+EXPOSE 7681
+
+# Automatically start interactive_ansible.sh via ttyd (web-based terminal)
+CMD ["ttyd", "-p", "7681", "bash", "/ansible/interactive_ansible.sh"]

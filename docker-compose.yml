@@ -26,6 +26,8 @@ services:
     networks:
       ansible_network:
         ipv4_address: 172.28.0.100
+    ports:
+      - "7681:7681" # Web-based terminal access
     restart: unless-stopped
     logging:
       driver: "json-file"
