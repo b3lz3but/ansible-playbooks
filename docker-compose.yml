@@ -12,9 +12,9 @@ services:
     tty: true
     environment:
       - TERM=xterm
-      - DEBIAN_FRONTEND=dialog
-      - ANSIBLE_HOST_KEY_CHECKING=False
+      - DEBIAN_FRONTEND=noninteractive
       - TZ=UTC
+      - ANSIBLE_HOST_KEY_CHECKING=False
       - ANSIBLE_FORCE_COLOR=1
       - PYTHONUNBUFFERED=1
     security_opt:

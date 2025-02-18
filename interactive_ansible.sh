@@ -58,7 +58,7 @@ else
     menu_cmd="echo"
 fi
 
-# Define playbook categories (Fixes missing variable)
+# Define playbook categories
 declare -A playbook_categories=(
     ["System Management"]="update_packages.yml restart_services.yml check_disk_space.yml"
     ["Security"]="security_scan.yml user_management.yml"
@@ -110,16 +110,10 @@ clear
 
 # Step 5: Execute selected playbooks
 if [ -n "$choices" ]; then
-    echo -e "${BLUE}📜 Selected playbooks: $choices${NC}"
     for playbook in $choices; do
-        if [ -f "playbooks/$playbook" ]; then
-            echo -e "${GREEN}▶️ Running: $playbook${NC}"
-            ansible-playbook -i inventory.ini "playbooks/$playbook"
-        else
-            echo -e "${RED}⚠️ Playbook $playbook not found!${NC}"
-        fi
+        ansible-playbook -i inventory.ini "playbooks/$playbook"
     done
-    echo -e "${GREEN}✅ All selected playbooks have been executed successfully!${NC}"
+    echo -e "${GREEN}✅ Playbooks executed successfully!${NC}"
 else
     echo -e "${RED}❌ No playbooks selected. Exiting.${NC}"
     exit 1

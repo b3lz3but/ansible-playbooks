@@ -5,12 +5,14 @@ FROM ubuntu:22.04
 LABEL maintainer="DevOps Team"
 LABEL description="Ansible control node container"
 
-# Prevent apt from prompting for input and set timezone
+# Prevent apt from prompting for input
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TERM=xterm
-ENV DEBIAN_PRIORITY=low
-ENV DEBIAN_FRONTEND=dialog
 ENV TZ=UTC
+
+# Pre-configure tzdata to avoid interactive prompt
+RUN ln -fs /usr/share/zoneinfo/UTC /etc/localtime \
+    && echo "UTC" > /etc/timezone
 
 # Install dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -22,6 +24,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python3-pip \
     git \
     openssh-client \
+    tzdata \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
