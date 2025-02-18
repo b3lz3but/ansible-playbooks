@@ -1,10 +1,16 @@
 # Use Ubuntu 22.04 as base image
 FROM ubuntu:22.04
 
-# Set non-interactive mode to prevent installation prompts
+# Add metadata
+LABEL maintainer="DevOps Team"
+LABEL description="Ansible control node container"
+
+# Prevent apt from prompting for input and set timezone
 ENV DEBIAN_FRONTEND=noninteractive
-# Ensure UI menus work inside Docker
 ENV TERM=xterm
+ENV DEBIAN_PRIORITY=low
+ENV DEBIAN_FRONTEND=dialog
+ENV TZ=UTC
 
 # Install dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \

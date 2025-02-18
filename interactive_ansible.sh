@@ -33,6 +33,15 @@ show_header() {
 # Debugging check for TERM variable
 echo -e "${GREEN}🔎 TERM value: $TERM${NC}"
 
+# Ensure `inventory.ini` exists
+if [ ! -f "inventory.ini" ]; then
+    echo -e "${RED}❌ Error: inventory.ini not found! Please add an inventory file.${NC}"
+    exit 1
+fi
+
+# Ensure required dependencies are installed
+check_dependencies
+
 # Verify that whiptail or dialog is available
 if ! command -v whiptail &> /dev/null && ! command -v dialog &> /dev/null; then
     echo "❌ Error: Neither whiptail nor dialog is installed."
@@ -49,29 +58,38 @@ else
     menu_cmd="echo"
 fi
 
+# Define playbook categories (Fixes missing variable)
+declare -A playbook_categories=(
+    ["System Management"]="update_packages.yml restart_services.yml check_disk_space.yml"
+    ["Security"]="security_scan.yml user_management.yml"
+    ["Maintenance"]="backup_files.yml log_cleanup.yml"
+    ["Networking"]="network_check.yml"
+    ["DevOps"]="containerization.yml ci_cd.yml"
+)
+
 # Step 3: Create menu options from categories
 menu_options=()
 for category in "${!playbook_categories[@]}"; do
-    while read -r playbook comment; do
-        if [ ! -z "$playbook" ]; then
-            playbook=$(echo $playbook | xargs) # Trim whitespace
-            menu_options+=("$playbook" "$category: $comment" OFF)
-        fi
-    done <<< "${playbook_categories[$category]}"
+    for playbook in ${playbook_categories[$category]}; do
+        menu_options+=("$playbook" "$category" OFF)
+    done
 done
 
 # Step 4: Debugging output for menu selection
 echo -e "${GREEN}🔎 Running menu system: $menu_cmd${NC}"
 
+# Short sleep to avoid race conditions in UI
+sleep 1
+
 # Display the checklist for user selection
 if [ "$menu_cmd" = "whiptail" ]; then
     choices=$(whiptail --title "Ansible Playbook Selection" --checklist \
-        "Select playbooks to run (Space to select, Enter to confirm):" 25 78 20 \
+        "Select playbooks to run (Space to select, Enter to confirm):" 25 78 10 \
         "${menu_options[@]}" 3>&1 1>&2 2>&3)
 elif [ "$menu_cmd" = "dialog" ]; then
     choices=$(dialog --clear --title "Ansible Playbook Selection" --checklist \
                 "Select playbooks to run (Space to select, Enter to confirm):" \
-                25 78 20 "${menu_options[@]}" 2>&1 >/dev/tty)
+                25 78 10 "${menu_options[@]}" 2>&1 >/dev/tty)
 else
     # Fallback mechanism in case UI fails
     echo -e "${RED}⚠️ UI failed, falling back to text selection.${NC}"
@@ -93,12 +111,15 @@ clear
 # Step 5: Execute selected playbooks
 if [ -n "$choices" ]; then
     echo -e "${BLUE}📜 Selected playbooks: $choices${NC}"
-    if run_playbooks $choices; then
-        echo -e "${GREEN}✅ All selected playbooks have been executed successfully!${NC}"
-    else
-        echo -e "${RED}❌ Some playbooks failed to execute properly.${NC}"
-        exit 1
-    fi
+    for playbook in $choices; do
+        if [ -f "playbooks/$playbook" ]; then
+            echo -e "${GREEN}▶️ Running: $playbook${NC}"
+            ansible-playbook -i inventory.ini "playbooks/$playbook"
+        else
+            echo -e "${RED}⚠️ Playbook $playbook not found!${NC}"
+        fi
+    done
+    echo -e "${GREEN}✅ All selected playbooks have been executed successfully!${NC}"
 else
     echo -e "${RED}❌ No playbooks selected. Exiting.${NC}"
     exit 1

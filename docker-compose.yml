@@ -10,13 +10,19 @@ services:
     working_dir: /ansible
     stdin_open: true
     tty: true
-    entrypoint: ["/bin/bash", "/ansible/interactive_ansible.sh"]
     environment:
       - TERM=xterm
+      - DEBIAN_FRONTEND=dialog
       - ANSIBLE_HOST_KEY_CHECKING=False
       - TZ=UTC
       - ANSIBLE_FORCE_COLOR=1
       - PYTHONUNBUFFERED=1
+    security_opt:
+      - no-new-privileges:false
+    tmpfs:
+      - /tmp:rw,noexec,nosuid
+      - /run:rw,noexec,nosuid
+      - /var/lib/apt/lists:rw
     networks:
       ansible_network:
         ipv4_address: 172.28.0.100
