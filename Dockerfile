@@ -30,11 +30,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Create ansible user and fix permissions
 RUN useradd -m -s /bin/bash ansible
-RUN mkdir -p /ansible /ansible/.ansible && chown -R ansible:ansible /ansible
+RUN mkdir -p /ansible/playbooks && chown -R ansible:ansible /ansible
 
 # Copy interactive script with correct permissions
 COPY interactive_ansible.sh /ansible/interactive_ansible.sh
 RUN chmod +x /ansible/interactive_ansible.sh && chown ansible:ansible /ansible/interactive_ansible.sh
+
+# Ensure ansible.log is writable
+RUN touch /ansible/ansible.log && chown ansible:ansible /ansible/ansible.log
 
 # Switch to ansible user
 USER ansible

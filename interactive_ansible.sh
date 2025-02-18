@@ -58,63 +58,56 @@ else
     menu_cmd="echo"
 fi
 
-# Define playbook categories
-declare -A playbook_categories=(
-    ["System Management"]="update_packages.yml restart_services.yml check_disk_space.yml"
-    ["Security"]="security_scan.yml user_management.yml"
-    ["Maintenance"]="backup_files.yml log_cleanup.yml"
-    ["Networking"]="network_check.yml"
-    ["DevOps"]="containerization.yml ci_cd.yml"
+# Define playbook list
+playbooks=(
+    "update_packages.yml"
+    "restart_services.yml"
+    "check_disk_space.yml"
+    "system_health_monitor.yml"
+    "security_scan.yml"
+    "backup_files.yml"
+    "user_management.yml"
+    "log_cleanup.yml"
+    "network_check.yml"
+    "system_administration.yml"
+    "networking.yml"
+    "scripting_automation.yml"
+    "monitoring_logging.yml"
+    "security_hardening.yml"
+    "troubleshooting.yml"
+    "cloud_management.yml"
+    "containerization.yml"
+    "ci_cd.yml"
+    "database_admin.yml"
+    "documentation.yml"
+    "collaboration.yml"
 )
 
-# Step 3: Create menu options from categories
+# Generate whiptail options
 menu_options=()
-for category in "${!playbook_categories[@]}"; do
-    for playbook in ${playbook_categories[$category]}; do
-        menu_options+=("$playbook" "$category" OFF)
-    done
+for playbook in "${playbooks[@]}"; do
+    menu_options+=("$playbook" "Run $playbook" OFF)
 done
 
-# Step 4: Debugging output for menu selection
-echo -e "${GREEN}🔎 Running menu system: $menu_cmd${NC}"
+# Display selection menu
+CHOICE=$(whiptail --title "Ansible Playbook Selection" --checklist \
+    "Select playbooks to run (Space to select, Enter to confirm):" 25 78 15 \
+    "${menu_options[@]}" 3>&1 1>&2 2>&3)
 
-# Short sleep to avoid race conditions in UI
-sleep 1
-
-# Display the checklist for user selection
-if [ "$menu_cmd" = "whiptail" ]; then
-    choices=$(whiptail --title "Ansible Playbook Selection" --checklist \
-        "Select playbooks to run (Space to select, Enter to confirm):" 25 78 10 \
-        "${menu_options[@]}" 3>&1 1>&2 2>&3)
-elif [ "$menu_cmd" = "dialog" ]; then
-    choices=$(dialog --clear --title "Ansible Playbook Selection" --checklist \
-                "Select playbooks to run (Space to select, Enter to confirm):" \
-                25 78 10 "${menu_options[@]}" 2>&1 >/dev/tty)
-else
-    # Fallback mechanism in case UI fails
-    echo -e "${RED}⚠️ UI failed, falling back to text selection.${NC}"
-    echo "Available Playbooks:"
-    select playbook in "${!playbook_categories[@]}" exit; do
-        if [[ "$playbook" == "exit" ]]; then
-            echo "🚪 Exiting..."
-            exit 0
-        elif [[ -n "$playbook" ]]; then
-            ansible-playbook -i inventory.ini "playbooks/$playbook"
-        else
-            echo "❌ Invalid selection, try again."
-        fi
-    done
-fi
-
-clear
-
-# Step 5: Execute selected playbooks
-if [ -n "$choices" ]; then
-    for playbook in $choices; do
-        ansible-playbook -i inventory.ini "playbooks/$playbook"
-    done
-    echo -e "${GREEN}✅ Playbooks executed successfully!${NC}"
-else
-    echo -e "${RED}❌ No playbooks selected. Exiting.${NC}"
+# Debugging output
+if [[ -z "$CHOICE" ]]; then
+    echo "❌ No playbooks selected. Exiting."
     exit 1
 fi
+
+# Run selected playbooks
+echo "▶️ Running selected playbooks: $CHOICE"
+for playbook in $CHOICE; do
+    if [[ -f "playbooks/$playbook" ]]; then
+        ansible-playbook -i inventory.ini "playbooks/$playbook" | tee -a /ansible/ansible.log
+    else
+        echo -e "${RED}⚠️ Playbook playbooks/$playbook not found!${NC}"
+    fi
+done
+
+echo -e "${GREEN}✅ Playbooks executed successfully!${NC}"
