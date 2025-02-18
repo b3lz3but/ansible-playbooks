@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   ansible:
     build:
@@ -7,28 +5,21 @@ services:
       dockerfile: Dockerfile
     container_name: ansible_controller
     volumes:
-      - .:/ansible:rw # Ensure directory is mounted with read-write access
-      - /var/run/docker.sock:/var/run/docker.sock # Allow Docker command execution
+      - .:/ansible:rw
+      - /var/run/docker.sock:/var/run/docker.sock
     working_dir: /ansible
     stdin_open: true
     tty: true
     entrypoint: ["/bin/bash", "/ansible/interactive_ansible.sh"]
     environment:
-      - ANSIBLE_HOST_KEY_CHECKING=False # Disable host key checking
-      - TZ=UTC # Set timezone
+      - TERM=xterm
+      - ANSIBLE_HOST_KEY_CHECKING=False
+      - TZ=UTC
       - ANSIBLE_FORCE_COLOR=1
       - PYTHONUNBUFFERED=1
-      - TERM=xterm # Ensure UI menus work properly inside Docker
-    security_opt:
-      - no-new-privileges:false # Allow privilege escalation
-    tmpfs:
-      - /tmp:rw,noexec,nosuid
-      - /run:rw,noexec,nosuid
-      - /var/lib/apt/lists:rw # Allow APT to function properly
-      - /var/log:rw # Ensure logging works correctly
     networks:
       ansible_network:
-        ipv4_address: 172.28.0.100 # Assign a static IP to the container
+        ipv4_address: 172.28.0.100
     restart: unless-stopped
     logging:
       driver: "json-file"

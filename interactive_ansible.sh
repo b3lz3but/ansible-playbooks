@@ -30,82 +30,10 @@ show_header() {
     echo ""
 }
 
-# Function to run selected playbooks with error handling
-run_playbooks() {
-    local exit_status=0
-    for playbook in "$@"; do
-        echo -e "${BLUE}▶️ Running: $playbook${NC}"
-        if [ -f "playbooks/$playbook" ]; then
-            ansible-playbook -i inventory.ini "playbooks/$playbook"
-            if [ $? -ne 0 ]; then
-                echo -e "${RED}❌ Error running $playbook${NC}"
-                exit_status=1
-            fi
-        else
-            echo -e "${RED}⚠️ Playbook $playbook not found!${NC}"
-            exit_status=1
-        fi
-    done
-    return $exit_status
-}
+# Debugging check for TERM variable
+echo -e "${GREEN}🔎 TERM value: $TERM${NC}"
 
-# Organized playbook categories
-declare -A playbook_categories=(
-    # System Management
-    ["System Management"]="
-        update_packages.yml         # System package updates
-        restart_services.yml        # Service management
-        check_disk_space.yml        # Disk space monitoring
-        system_health_monitor.yml   # System health checks
-        system_administration.yml   # General admin tasks
-    "
-    
-    # Security
-    ["Security"]="
-        security_scan.yml          # Security vulnerability scanning
-        security_hardening.yml     # System hardening procedures
-        user_management.yml        # User access control
-    "
-    
-    # Maintenance
-    ["Maintenance"]="
-        backup_files.yml           # System backup procedures
-        log_cleanup.yml            # Log rotation and cleanup
-        troubleshooting.yml         # System troubleshooting
-    "
-    
-    # Network
-    ["Network"]="
-        network_check.yml          # Network connectivity tests
-        networking.yml             # Network configuration
-    "
-    
-    # DevOps
-    ["DevOps"]="
-        scripting_automation.yml   # Automation scripts
-        monitoring_logging.yml     # Monitoring setup
-        ci_cd.yml                  # CI/CD pipeline tasks
-        containerization.yml       # Container management
-    "
-    
-    # Infrastructure
-    ["Infrastructure"]="
-        cloud_management.yml       # Cloud resource management
-        database_admin.yml         # Database administration
-    "
-    
-    # Documentation
-    ["Documentation"]="
-        documentation.yml          # System documentation
-        collaboration.yml          # Team collaboration tools
-    "
-)
-
-# Step 1: Install required dependencies
-check_dependencies
-show_header
-
-# Step 2: Determine the menu system (whiptail or dialog)
+# Verify that whiptail or dialog is available
 if ! command -v whiptail &> /dev/null && ! command -v dialog &> /dev/null; then
     echo "❌ Error: Neither whiptail nor dialog is installed."
     apt-get update && apt-get install -y whiptail dialog
@@ -117,8 +45,8 @@ if command -v whiptail &> /dev/null; then
 elif command -v dialog &> /dev/null; then
     menu_cmd="dialog"
 else
-    echo "❌ Error: Menu system is unavailable. Exiting."
-    exit 1
+    echo "❌ Error: Menu system is unavailable. Falling back to text input."
+    menu_cmd="echo"
 fi
 
 # Step 3: Create menu options from categories
@@ -132,15 +60,32 @@ for category in "${!playbook_categories[@]}"; do
     done <<< "${playbook_categories[$category]}"
 done
 
-# Step 4: Display the checklist for user selection
+# Step 4: Debugging output for menu selection
+echo -e "${GREEN}🔎 Running menu system: $menu_cmd${NC}"
+
+# Display the checklist for user selection
 if [ "$menu_cmd" = "whiptail" ]; then
     choices=$(whiptail --title "Ansible Playbook Selection" --checklist \
         "Select playbooks to run (Space to select, Enter to confirm):" 25 78 20 \
         "${menu_options[@]}" 3>&1 1>&2 2>&3)
-else
-    choices=$(dialog --clear --title "Ansible Playbook Selection" \
-                --checklist "Select playbooks to run (Space to select, Enter to confirm):" \
+elif [ "$menu_cmd" = "dialog" ]; then
+    choices=$(dialog --clear --title "Ansible Playbook Selection" --checklist \
+                "Select playbooks to run (Space to select, Enter to confirm):" \
                 25 78 20 "${menu_options[@]}" 2>&1 >/dev/tty)
+else
+    # Fallback mechanism in case UI fails
+    echo -e "${RED}⚠️ UI failed, falling back to text selection.${NC}"
+    echo "Available Playbooks:"
+    select playbook in "${!playbook_categories[@]}" exit; do
+        if [[ "$playbook" == "exit" ]]; then
+            echo "🚪 Exiting..."
+            exit 0
+        elif [[ -n "$playbook" ]]; then
+            ansible-playbook -i inventory.ini "playbooks/$playbook"
+        else
+            echo "❌ Invalid selection, try again."
+        fi
+    done
 fi
 
 clear
