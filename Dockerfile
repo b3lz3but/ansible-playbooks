@@ -12,7 +12,7 @@ ENV PYTHONUNBUFFERED=1
 # Install required packages, including Cockpit
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ansible sshpass dialog whiptail python3 python3-pip git \
-    cockpit cockpit-bridge cockpit-dashboard cockpit-networkmanager \
+    cockpit cockpit-bridge cockpit-system cockpit-networkmanager \
     && rm -rf /var/lib/apt/lists/*
 
 # Create ansible user
