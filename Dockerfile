@@ -14,6 +14,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ansible \
     sshpass \
     dialog \
+    whiptail \  
     python3 \
     python3-pip \
     git \
