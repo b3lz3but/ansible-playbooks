@@ -1,3 +1,5 @@
+version: "3.8"
+
 services:
   ansible:
     build:
@@ -16,14 +18,17 @@ services:
       - TZ=UTC # Set timezone
       - ANSIBLE_FORCE_COLOR=1
       - PYTHONUNBUFFERED=1
+      - TERM=xterm # Ensure UI menus work properly inside Docker
     security_opt:
       - no-new-privileges:false # Allow privilege escalation
     tmpfs:
       - /tmp:rw,noexec,nosuid
       - /run:rw,noexec,nosuid
       - /var/lib/apt/lists:rw # Allow APT to function properly
+      - /var/log:rw # Ensure logging works correctly
     networks:
-      - ansible_network
+      ansible_network:
+        ipv4_address: 172.28.0.100 # Assign a static IP to the container
     restart: unless-stopped
     logging:
       driver: "json-file"
@@ -35,6 +40,5 @@ networks:
   ansible_network:
     driver: bridge
     ipam:
-      driver: default
       config:
         - subnet: 172.28.0.0/16
