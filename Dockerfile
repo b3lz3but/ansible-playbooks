@@ -11,7 +11,7 @@ ENV PYTHONUNBUFFERED=1
 
 # Install required packages
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    ansible sshpass dialog whiptail python3 python3-pip git ttyd \
+    ansible sshpass dialog whiptail python3 python3-pip git cockpit \
     && rm -rf /var/lib/apt/lists/*
 
 # Create ansible user
@@ -31,8 +31,8 @@ RUN chmod +x /ansible/interactive_ansible.sh && chown ansible:ansible /ansible/i
 # Set working directory
 WORKDIR /ansible
 
-# Expose ttyd for web-based terminal access
-EXPOSE 7681
+# Expose Cockpit web interface
+EXPOSE 9090
 
-# Automatically start interactive_ansible.sh via ttyd (web-based terminal)
-CMD ["ttyd", "-p", "7681", "bash", "/ansible/interactive_ansible.sh"]
+# Start Cockpit service automatically
+CMD ["/usr/sbin/cockpit-ws"]

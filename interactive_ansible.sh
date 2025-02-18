@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Script: Interactive Ansible Playbook Runner
-# Description: Interactive menu to select and run Ansible playbooks
+# Description: Interactive menu to select and run Ansible playbooks with a GUI
 # Author: System Administrator
 # Last Modified: 2024
 
@@ -34,7 +34,7 @@ show_header() {
 echo -e "${GREEN}🔎 TERM value: $TERM${NC}"
 
 # Ensure `inventory.ini` exists
-if [ ! -f "inventory.ini" ]; then
+if [ ! -f "/ansible/inventory.ini" ]; then
     echo -e "${RED}❌ Error: inventory.ini not found! Please add an inventory file.${NC}"
     exit 1
 fi
@@ -103,10 +103,10 @@ fi
 # Run selected playbooks
 echo "▶️ Running selected playbooks: $CHOICE"
 for playbook in $CHOICE; do
-    if [[ -f "playbooks/$playbook" ]]; then
-        ansible-playbook -i inventory.ini "playbooks/$playbook" | tee -a /ansible/ansible.log
+    if [[ -f "/ansible/playbooks/$playbook" ]]; then
+        ansible-playbook -i /ansible/inventory.ini "/ansible/playbooks/$playbook" | tee -a /ansible/ansible.log
     else
-        echo -e "${RED}⚠️ Playbook playbooks/$playbook not found!${NC}"
+        echo -e "${RED}⚠️ Playbook /ansible/playbooks/$playbook not found!${NC}"
     fi
 done
 
