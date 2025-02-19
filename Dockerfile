@@ -21,7 +21,9 @@ RUN apt-get update && \
     python3-pip \
     git \
     wget \
-    perl && \
+    perl \
+    openssl \
+    net-tools && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
@@ -29,6 +31,9 @@ RUN apt-get update && \
 RUN wget -q http://prdownloads.sourceforge.net/webadmin/webmin_2.013_all.deb && \
     dpkg --install webmin_2.013_all.deb || apt-get -fy install && \
     rm -f webmin_2.013_all.deb
+
+# Expose Webmin port
+EXPOSE 10000
 
 # Copy Python requirements and install them
 COPY requirements.txt /tmp/requirements.txt
