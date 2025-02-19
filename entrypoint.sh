@@ -20,9 +20,9 @@ while ! curl -k -s https://localhost:10000 >/dev/null; do
 done
 
 # Get the container's IP address dynamically
-IP_ADDRESS=$(ip route get 1 | awk '{print $7;exit}')
+IP_ADDRESS=$(hostname -I | awk '{print $1}')
 if [ -z "$IP_ADDRESS" ]; then
-    IP_ADDRESS=$(hostname -I | awk '{print $1}')
+    IP_ADDRESS=$(ip route get 1 | awk '{print $7;exit}')
 fi
 
 echo "🔗 Webmin is available at: https://$IP_ADDRESS:10000"

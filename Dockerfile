@@ -32,6 +32,9 @@ RUN wget -q http://prdownloads.sourceforge.net/webadmin/webmin_2.013_all.deb && 
     dpkg --install webmin_2.013_all.deb || apt-get -fy install && \
     rm -f webmin_2.013_all.deb
 
+# Ensure Webmin has correct permissions
+RUN chmod -R 755 /etc/webmin
+
 # Expose Webmin port
 EXPOSE 10000
 
