@@ -15,9 +15,9 @@ NC='\033[0m' # No Color
 check_dependencies() {
     local deps=(ansible sshpass dialog whiptail)
     for dep in "${deps[@]}"; do
-        if ! command -v $dep &> /dev/null; then
+        if ! command -v "$dep" &> /dev/null; then
             echo -e "${RED}Installing $dep...${NC}"
-            apt update && apt install -y $dep
+            apt-get update && apt-get install -y "$dep"
         fi
     done
 }
@@ -54,33 +54,33 @@ if command -v whiptail &> /dev/null; then
 elif command -v dialog &> /dev/null; then
     menu_cmd="dialog"
 else
-    echo "❌ Error: Menu system is unavailable. Falling back to text input."
+    echo "❌ Error: Neither whiptail nor dialog is available. Falling back to text input."
     menu_cmd="echo"
 fi
 
 # Define playbook list
 playbooks=(
-    "update_packages.yml"
-    "restart_services.yml"
-    "check_disk_space.yml"
-    "system_health_monitor.yml"
-    "security_scan.yml"
-    "backup_files.yml"
-    "user_management.yml"
-    "log_cleanup.yml"
-    "network_check.yml"
-    "system_administration.yml"
-    "networking.yml"
-    "scripting_automation.yml"
-    "monitoring_logging.yml"
-    "security_hardening.yml"
-    "troubleshooting.yml"
-    "cloud_management.yml"
-    "containerization.yml"
-    "ci_cd.yml"
-    "database_admin.yml"
-    "documentation.yml"
-    "collaboration.yml"
+    update_packages.yml
+    restart_services.yml
+    check_disk_space.yml
+    system_health_monitor.yml
+    security_scan.yml
+    backup_files.yml
+    user_management.yml
+    log_cleanup.yml
+    network_check.yml
+    system_administration.yml
+    networking.yml
+    scripting_automation.yml
+    monitoring_logging.yml
+    security_hardening.yml
+    troubleshooting.yml
+    cloud_management.yml
+    containerization.yml
+    ci_cd.yml
+    database_admin.yml
+    documentation.yml
+    collaboration.yml
 )
 
 # Generate whiptail options
@@ -90,7 +90,7 @@ for playbook in "${playbooks[@]}"; do
 done
 
 # Display selection menu
-CHOICE=$(whiptail --title "Ansible Playbook Selection" --checklist \
+CHOICE="$($menu_cmd --title "Ansible Playbook Selection" --checklist \
     "Select playbooks to run (Space to select, Enter to confirm):" 25 78 15 \
     "${menu_options[@]}" 3>&1 1>&2 2>&3)
 
@@ -102,11 +102,19 @@ fi
 
 # Run selected playbooks
 echo "▶️ Running selected playbooks: $CHOICE"
-for playbook in $CHOICE; do
-    if [[ -f "/ansible/playbooks/$playbook" ]]; then
-        ansible-playbook -i /ansible/inventory.ini "/ansible/playbooks/$playbook" | tee -a /ansible/ansible.log
+for playbook in "$CHOICE"; do
+    playbook_cleaned=$(echo "$playbook" | tr -d '"')  # Remove any extra quotes
+    playbook_path="/ansible/playbooks/$playbook_cleaned"
+
+    if [[ -f "$playbook_path" ]]; then
+        echo -e "${BLUE}▶️ Running: $playbook_cleaned${NC}"
+        if ansible-playbook -i /ansible/inventory.ini "$playbook_path" | tee -a /ansible/ansible.log; then
+            echo -e "${GREEN}✅ Playbook $playbook_cleaned executed successfully!${NC}"
+        else
+            echo -e "${RED}❌ Error executing playbook $playbook_cleaned!${NC}"
+        fi
     else
-        echo -e "${RED}⚠️ Playbook /ansible/playbooks/$playbook not found!${NC}"
+        echo -e "${RED}⚠️ Playbook $playbook_cleaned not found!${NC}"
     fi
 done
 
