@@ -49,5 +49,5 @@ WORKDIR /ansible
 # Make sure interactive script is executable
 RUN chmod +x /ansible/interactive_ansible.sh
 
-# Start Cockpit Web UI and the interactive Ansible script
-CMD ["/bin/bash", "-c", "/usr/lib/cockpit-ws & /ansible/interactive_ansible.sh"]
+# Keep container running after launching services
+CMD ["/bin/bash", "-c", "/usr/lib/cockpit-ws & sleep 5 && /ansible/interactive_ansible.sh; tail -f /dev/null"]
