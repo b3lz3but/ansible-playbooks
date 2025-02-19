@@ -1,5 +1,6 @@
 FROM ubuntu:22.04
 
+# Set environment variables
 ENV ANSIBLE_HOST_KEY_CHECKING=False
 ENV PYTHONUNBUFFERED=1
 ENV ANSIBLE_FORCE_COLOR=1
@@ -36,13 +37,17 @@ RUN apt-get update && \
     cockpit-bridge \
     cockpit-system \
     && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* \
-    && test -f /usr/lib/cockpit/cockpit-ws
+    && rm -rf /var/lib/apt/lists/*
 
+# Copy dependencies and scripts
 COPY requirements.txt /tmp/requirements.txt
 RUN pip3 install -r /tmp/requirements.txt
 
 COPY . /ansible
 WORKDIR /ansible
 
-ENTRYPOINT ["ansible-playbook"]
+# Make sure interactive script is executable
+RUN chmod +x /ansible/interactive_ansible.sh
+
+# Start Cockpit Web UI and the interactive Ansible script
+CMD ["/bin/bash", "-c", "/usr/lib/cockpit-ws & /ansible/interactive_ansible.sh"]
