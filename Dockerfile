@@ -13,7 +13,11 @@ ENV PYTHONUNBUFFERED=1
 RUN apt-get update && apt-get install -y --no-install-recommends \
     software-properties-common curl \
     && add-apt-repository universe \
-    && apt-get update && apt-get install -y --no-install-recommends \
+    && apt-get update \
+    && . /etc/os-release \
+    && echo "deb http://deb.debian.org/debian ${VERSION_CODENAME}-backports main" > /etc/apt/sources.list.d/backports.list \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends \
     ansible sshpass dialog whiptail python3 python3-pip git \
     cockpit cockpit-ws cockpit-bridge cockpit-system cockpit-networkmanager \
     && rm -rf /var/lib/apt/lists/*
