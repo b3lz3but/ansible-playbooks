@@ -15,6 +15,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     cockpit cockpit-ws cockpit-bridge cockpit-system cockpit-networkmanager \
     && rm -rf /var/lib/apt/lists/*
 
+# Ensure Cockpit Web Service is installed
+RUN if ! command -v cockpit-ws &> /dev/null; then echo "❌ cockpit-ws not found!"; exit 1; fi
+
 # Create ansible user
 RUN useradd -m -s /bin/bash ansible
 
@@ -35,5 +38,5 @@ WORKDIR /ansible
 # Expose Cockpit Web UI port
 EXPOSE 9090
 
-# Start Cockpit directly (without systemctl) in the foreground
-CMD ["/usr/lib/cockpit-ws"]
+# Start Cockpit in foreground to prevent container crash
+CMD ["bash", "-c", "cockpit-ws"]
