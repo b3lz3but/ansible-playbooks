@@ -1,12 +1,12 @@
-# Use Ubuntu 22.04 as base image
 FROM ubuntu:22.04
 
 # Set environment variables
-ENV ANSIBLE_HOST_KEY_CHECKING=False
-ENV PYTHONUNBUFFERED=1
-ENV ANSIBLE_FORCE_COLOR=1
 ENV DEBIAN_FRONTEND=noninteractive
+ENV TERM=xterm
 ENV TZ=UTC
+ENV ANSIBLE_HOST_KEY_CHECKING=False
+ENV ANSIBLE_FORCE_COLOR=1
+ENV PYTHONUNBUFFERED=1
 
 # Install dependencies
 RUN apt-get update && \
@@ -21,37 +21,32 @@ RUN apt-get update && \
     python3-pip \
     git \
     wget \
-    perl \
-    openssl \
-    net-tools && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+    libnet-ssleay-perl \
+    libauthen-pam-perl \
+    libio-pty-perl \
+    apt-show-versions \
+    unzip \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
-# Install Webmin
+# Install Webmin correctly
 RUN wget -q http://prdownloads.sourceforge.net/webadmin/webmin_2.013_all.deb && \
     dpkg --install webmin_2.013_all.deb || apt-get -fy install && \
     rm -f webmin_2.013_all.deb
 
-# Ensure Webmin has correct permissions
-RUN chmod -R 755 /etc/webmin
+# Ensure Webmin is installed before setting permissions
+RUN test -d /etc/webmin && chmod -R 755 /etc/webmin || echo "Webmin directory not found, skipping chmod"
 
-# Expose Webmin port
-EXPOSE 10000
-
-# Copy Python requirements and install them
+# Copy dependencies and scripts
 COPY requirements.txt /tmp/requirements.txt
 RUN pip3 install -r /tmp/requirements.txt
 
-# Copy project files
 COPY . /ansible
 WORKDIR /ansible
 
-# Ensure interactive script is executable
+# Make scripts executable
 RUN chmod +x /ansible/interactive_ansible.sh
-
-# Copy custom startup script
-COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
-# Start Webmin & Run Ansible
+# Set entrypoint
 ENTRYPOINT ["/entrypoint.sh"]
