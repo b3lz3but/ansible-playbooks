@@ -9,8 +9,11 @@ ENV ANSIBLE_HOST_KEY_CHECKING=False
 ENV ANSIBLE_FORCE_COLOR=1
 ENV PYTHONUNBUFFERED=1
 
-# Install required packages, including Cockpit
+# Add the Cockpit repository and install Cockpit
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    software-properties-common curl \
+    && add-apt-repository universe \
+    && apt-get update && apt-get install -y --no-install-recommends \
     ansible sshpass dialog whiptail python3 python3-pip git \
     cockpit cockpit-ws cockpit-bridge cockpit-system cockpit-networkmanager \
     && rm -rf /var/lib/apt/lists/*
@@ -38,5 +41,5 @@ WORKDIR /ansible
 # Expose Cockpit Web UI port
 EXPOSE 9090
 
-# Start Cockpit in foreground to prevent container crash
-CMD ["bash", "-c", "cockpit-ws"]
+# Start Cockpit in foreground (without systemctl)
+CMD ["/usr/sbin/cockpit-ws"]
