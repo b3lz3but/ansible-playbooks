@@ -13,21 +13,26 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     software-properties-common \
     curl \
-    cockpit \
-    cockpit-ws \
-    cockpit-bridge \
-    cockpit-system \
     ansible \
     sshpass \
     dialog \
     whiptail \
     python3 \
     python3-pip \
-    git && \
+    git \
+    wget && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-# Copy Python requirements and install
+# Install Webmin
+RUN wget -q http://prdownloads.sourceforge.net/webadmin/webmin_2.013_all.deb && \
+    dpkg --install webmin_2.013_all.deb || apt-get -fy install && \
+    rm -f webmin_2.013_all.deb
+
+# Start Webmin on boot
+RUN systemctl enable webmin
+
+# Copy Python requirements and install them
 COPY requirements.txt /tmp/requirements.txt
 RUN pip3 install -r /tmp/requirements.txt
 
@@ -35,8 +40,8 @@ RUN pip3 install -r /tmp/requirements.txt
 COPY . /ansible
 WORKDIR /ansible
 
-# Ensure script is executable
+# Ensure interactive script is executable
 RUN chmod +x /ansible/interactive_ansible.sh
 
-# Start Cockpit Web UI & run Ansible script automatically
-CMD ["/bin/bash", "-c", "/usr/lib/cockpit-ws & sleep 5 && /ansible/interactive_ansible.sh"]
+# Start Webmin and run the Ansible script automatically
+CMD ["/bin/bash", "-c", "service webmin start && /ansible/interactive_ansible.sh && tail -f /dev/null"]

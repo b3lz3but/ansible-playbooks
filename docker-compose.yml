@@ -19,15 +19,11 @@ services:
       - PYTHONUNBUFFERED=1
     security_opt:
       - no-new-privileges:false
-    tmpfs:
-      - /tmp:rw,noexec,nosuid
-      - /run:rw,noexec,nosuid
-      - /var/lib/apt/lists:rw
     networks:
       ansible_network:
         ipv4_address: 172.28.0.100
     ports:
-      - "5761:9090" # Cockpit Web UI mapped to 5761
+      - "5761:10000" # Webmin Admin Panel
     restart: unless-stopped
     logging:
       driver: "json-file"

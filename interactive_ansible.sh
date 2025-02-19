@@ -25,7 +25,7 @@ check_dependencies() {
 # Function to get server IP and display access link
 get_server_ip() {
     SERVER_IP=$(hostname -I | awk '{print $1}')
-    echo -e "${BLUE}🌐 Access Cockpit Web UI at: https://$SERVER_IP:5761${NC}"
+    echo -e "${BLUE}🌐 Access Webmin Admin Panel at: https://$SERVER_IP:5761${NC}"
 }
 
 # Ensure inventory file exists
@@ -90,16 +90,8 @@ if [[ -z "$CHOICE" ]]; then
 fi
 
 # Run selected playbooks
-echo "▶️ Running selected playbooks: $CHOICE"
 for playbook in $CHOICE; do
-    playbook_path="/ansible/playbooks/$playbook"
-
-    if [[ -f "$playbook_path" ]]; then
-        echo -e "${BLUE}▶️ Running: $(basename "$playbook_path")${NC}"
-        ansible-playbook -i /ansible/inventory.ini "$playbook_path" | tee -a /ansible/ansible.log
-    else
-        echo -e "${RED}⚠️ Playbook $playbook_path not found!${NC}"
-    fi
+    ansible-playbook -i /ansible/inventory.ini "/ansible/playbooks/$playbook"
 done
 
 echo -e "${GREEN}✅ Playbooks executed successfully!${NC}"
