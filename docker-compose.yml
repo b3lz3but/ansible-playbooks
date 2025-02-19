@@ -27,7 +27,7 @@ services:
       ansible_network:
         ipv4_address: 172.28.0.100
     ports:
-      - "5761:5761" # Cockpit Web UI
+      - "5761:9090" # Cockpit Web UI mapped to 5761
     restart: unless-stopped
     logging:
       driver: "json-file"
