@@ -1,9 +1,14 @@
 #!/bin/bash
 set -e
 
-echo "🔄 Starting Webmin directly..."
+# Set default Webmin credentials (override via environment variables if needed)
+WEBMIN_USER=${WEBMIN_USER:-root}
+WEBMIN_PASS=${WEBMIN_PASS:-changeme}
 
-# Start Webmin without using systemctl or service
+echo "🔄 Setting Webmin credentials for user '${WEBMIN_USER}'..."
+/usr/share/webmin/changepass.pl /etc/webmin ${WEBMIN_USER} ${WEBMIN_PASS}
+
+echo "🔄 Starting Webmin directly..."
 /usr/share/webmin/miniserv.pl /etc/webmin/miniserv.conf &
 
 # Wait for Webmin to be ready
@@ -25,7 +30,6 @@ if [ -z "$IP_ADDRESS" ]; then
     IP_ADDRESS=$(hostname -I | awk '{print $1}')
 fi
 
-# Inform the user of the externally accessible URL (mapped port 5761)
 echo "🌍 Webmin is available at: https://$IP_ADDRESS:5761"
 
 # Run the Ansible interactive script if it exists
