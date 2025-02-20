@@ -26,19 +26,20 @@ RUN apt-get update && \
     libauthen-pam-perl \
     libio-pty-perl \
     apt-show-versions \
-    python \
+    python-is-python3 \
     unzip && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-# Install Webmin using the latest repository setup script
+# Install Webmin
 RUN curl -o setup-repos.sh https://raw.githubusercontent.com/webmin/webmin/master/setup-repos.sh && \
     sh setup-repos.sh && \
     apt-get update && \
     apt-get install -y webmin && \
     rm -f setup-repos.sh
 
-# Ensure Webmin has the correct permissions
+# Ensure Webmin is enabled and starts automatically
+RUN systemctl enable webmin || echo "Webmin could not be enabled"
 RUN test -d /etc/webmin && chmod -R 755 /etc/webmin || echo "⚠️ Webmin directory not found, skipping chmod"
 
 # Copy dependencies and scripts
