@@ -1,4 +1,3 @@
-# Dockerfile
 FROM ubuntu:22.04
 
 # Set environment variables
@@ -51,9 +50,13 @@ RUN pip3 install -r /tmp/requirements.txt
 COPY . /ansible
 WORKDIR /ansible
 
-# Copy and set permissions for the entrypoint script and interactive script
+# Copy and set permissions for the entrypoint script
 COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh && chmod +x /ansible/interactive_ansible.sh
+RUN chmod +x /entrypoint.sh
+
+# Copy the Webmin CGI script to the Webmin CGI directory and make it executable
+COPY ansible_webmin.cgi /usr/share/webmin/ansible_webmin.cgi
+RUN chmod +x /usr/share/webmin/ansible_webmin.cgi
 
 # Expose Webmin port
 EXPOSE 10000
