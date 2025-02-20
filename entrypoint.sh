@@ -24,16 +24,14 @@ while ! curl -k -s https://localhost:10000 >/dev/null; do
     ((attempt++))
 done
 
-# Get the container's IP address
 IP_ADDRESS=$(ip route get 1 | awk '{print $7; exit}')
 if [ -z "$IP_ADDRESS" ]; then
     IP_ADDRESS=$(hostname -I | awk '{print $1}')
 fi
 
 echo "🌍 Webmin is available at: https://$IP_ADDRESS:5761"
-echo "👉 To run playbooks, go to the 'Ansible Playbook Runner' module in the Webmin interface."
+echo "👉 Open Webmin and look for the 'Ansible Playbook Runner' module to run playbooks."
 
-# Check if Webmin log file exists and tail it, otherwise tail /dev/null
 if [ -f /var/log/webmin/miniserv.log ]; then
     exec tail -f /var/log/webmin/miniserv.log
 else
