@@ -44,6 +44,9 @@ RUN pip3 install -r /tmp/requirements.txt
 COPY . /ansible
 WORKDIR /ansible
 
+# Copy the entrypoint script to the root folder
+COPY entrypoint.sh /entrypoint.sh
+
 # Make scripts executable
 RUN chmod +x /ansible/interactive_ansible.sh
 RUN chmod +x /entrypoint.sh
