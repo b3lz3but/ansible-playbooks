@@ -3,14 +3,10 @@
 # Exit on any error
 set -e
 
-echo "🔄 Starting Webmin service..."
-if service webmin start; then
-    echo "✅ Webmin service started successfully"
-else
-    echo "⚠️ Webmin failed to start! Attempting to fix..."
-    apt-get update && apt-get install -y perl libnet-ssleay-perl libauthen-pam-perl libio-pty-perl apt-show-versions python-is-python3
-    service webmin restart
-fi
+echo "🔄 Starting Webmin directly..."
+
+# Start Webmin without using systemctl or service
+/usr/share/webmin/miniserv.pl /etc/webmin/miniserv.conf &
 
 # Wait for Webmin to be ready
 max_attempts=30
@@ -41,9 +37,5 @@ else
     echo "⚠️ Warning: /ansible/interactive_ansible.sh not found"
 fi
 
-# Handle SIGTERM gracefully
-trap 'echo "🚦 Received SIGTERM, shutting down..."; service webmin stop; exit 0' SIGTERM
-
-# Keep container running
-echo "✅ Container is running..."
-exec tail -f /dev/null
+# Keep container running (Webmin runs as PID 1)
+exec tail -f /var/log/webmin/miniserv.log

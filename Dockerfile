@@ -31,16 +31,15 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-# Install Webmin
+# Install Webmin from the official repository
 RUN curl -o setup-repos.sh https://raw.githubusercontent.com/webmin/webmin/master/setup-repos.sh && \
     sh setup-repos.sh && \
     apt-get update && \
     apt-get install -y webmin && \
     rm -f setup-repos.sh
 
-# Ensure Webmin is enabled and starts automatically
-RUN systemctl enable webmin || echo "Webmin could not be enabled"
-RUN test -d /etc/webmin && chmod -R 755 /etc/webmin || echo "⚠️ Webmin directory not found, skipping chmod"
+# Ensure Webmin permissions are correct
+RUN chmod -R 755 /etc/webmin || echo "⚠️ Webmin directory not found, skipping chmod"
 
 # Copy dependencies and scripts
 COPY requirements.txt /tmp/requirements.txt
@@ -49,7 +48,7 @@ RUN pip3 install -r /tmp/requirements.txt
 COPY . /ansible
 WORKDIR /ansible
 
-# Copy the entrypoint script to the root folder
+# Copy the entrypoint script
 COPY entrypoint.sh /entrypoint.sh
 
 # Make scripts executable
