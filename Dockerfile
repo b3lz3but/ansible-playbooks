@@ -54,9 +54,9 @@ WORKDIR /ansible
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
-# Copy the Webmin CGI script to the Webmin CGI directory and make it executable
-COPY ansible_webmin.cgi /usr/share/webmin/ansible_webmin.cgi
-RUN chmod +x /usr/share/webmin/ansible_webmin.cgi
+# Copy the Ansible Webmin module into Webmin's modules directory
+COPY webmin_ansible_module /usr/share/webmin/ansible_module
+RUN chmod -R +x /usr/share/webmin/ansible_module
 
 # Expose Webmin port
 EXPOSE 10000

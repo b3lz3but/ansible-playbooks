@@ -31,7 +31,7 @@ if [ -z "$IP_ADDRESS" ]; then
 fi
 
 echo "🌍 Webmin is available at: https://$IP_ADDRESS:5761"
-echo "👉 To run playbooks via Webmin, use the CGI script at: https://$IP_ADDRESS:5761/ansible_webmin.cgi"
+echo "👉 To run playbooks, go to the 'Ansible Playbook Runner' module in the Webmin interface."
 
 # Check if Webmin log file exists and tail it, otherwise tail /dev/null
 if [ -f /var/log/webmin/miniserv.log ]; then
