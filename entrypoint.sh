@@ -33,5 +33,10 @@ fi
 echo "🌍 Webmin is available at: https://$IP_ADDRESS:5761"
 echo "👉 To run playbooks via Webmin, use the CGI script at: https://$IP_ADDRESS:5761/ansible_webmin.cgi"
 
-# Keep the container running by tailing the Webmin log
-exec tail -f /var/log/webmin/miniserv.log
+# Check if Webmin log file exists and tail it, otherwise tail /dev/null
+if [ -f /var/log/webmin/miniserv.log ]; then
+    exec tail -f /var/log/webmin/miniserv.log
+else
+    echo "Log file not found. Tailing /dev/null instead."
+    exec tail -f /dev/null
+fi
