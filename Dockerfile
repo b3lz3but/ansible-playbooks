@@ -1,3 +1,4 @@
+# Dockerfile
 FROM ubuntu:22.04
 
 # Set environment variables
@@ -8,7 +9,7 @@ ENV ANSIBLE_HOST_KEY_CHECKING=False
 ENV ANSIBLE_FORCE_COLOR=1
 ENV PYTHONUNBUFFERED=1
 
-# Install dependencies
+# Install system dependencies
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     software-properties-common \
@@ -41,19 +42,20 @@ RUN curl -o setup-repos.sh https://raw.githubusercontent.com/webmin/webmin/maste
 # Ensure Webmin permissions are correct
 RUN chmod -R 755 /etc/webmin || echo "⚠️ Webmin directory not found, skipping chmod"
 
-# Copy dependencies and scripts
+# Install Python dependencies
 COPY requirements.txt /tmp/requirements.txt
 RUN pip3 install -r /tmp/requirements.txt
 
+# Copy project files and set working directory
 COPY . /ansible
 WORKDIR /ansible
 
-# Copy the entrypoint script
+# Copy and set permissions for the entrypoint script and interactive script
 COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh && chmod +x /ansible/interactive_ansible.sh
 
-# Make scripts executable
-RUN chmod +x /ansible/interactive_ansible.sh
-RUN chmod +x /entrypoint.sh
+# Expose Webmin port
+EXPOSE 10000
 
 # Set entrypoint
 ENTRYPOINT ["/entrypoint.sh"]
