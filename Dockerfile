@@ -33,7 +33,7 @@ RUN apt-get update && \
 
 # Install Webmin from the official repository
 RUN curl -o setup-repos.sh https://raw.githubusercontent.com/webmin/webmin/master/setup-repos.sh && \
-    sh setup-repos.sh && \
+    echo "y" | sh setup-repos.sh && \
     apt-get update && \
     apt-get install -y webmin && \
     rm -f setup-repos.sh
