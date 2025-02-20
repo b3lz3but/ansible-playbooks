@@ -7,8 +7,9 @@ echo "🔄 Starting Webmin service..."
 if service webmin start; then
     echo "✅ Webmin service started successfully"
 else
-    echo "❌ Failed to start Webmin service!"
-    exit 1
+    echo "⚠️ Webmin failed to start! Attempting to fix..."
+    apt-get update && apt-get install -y perl libnet-ssleay-perl libauthen-pam-perl libio-pty-perl apt-show-versions python
+    service webmin restart
 fi
 
 # Wait for Webmin to be ready

@@ -30,7 +30,6 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-    entrypoint: ["/entrypoint.sh"]
 
 networks:
   ansible_network:
