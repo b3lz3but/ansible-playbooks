@@ -9,7 +9,7 @@ ENV ANSIBLE_HOST_KEY_CHECKING=False
 ENV ANSIBLE_FORCE_COLOR=1
 ENV PYTHONUNBUFFERED=1
 
-# Install system dependencies
+# Install system dependencies, including iproute2 for the `ip` command
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     software-properties-common \
@@ -18,6 +18,7 @@ RUN apt-get update && \
     sshpass \
     dialog \
     whiptail \
+    iproute2 \
     python3 \
     python3-pip \
     git \
