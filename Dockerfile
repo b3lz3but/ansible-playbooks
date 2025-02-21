@@ -21,7 +21,7 @@ RUN apt-get update \
     && pip install -r /opt/awx/requirements.txt
 
 # COPY the requirements.txt before installing dependencies
-COPY requirments.txt /opt/awx/requirements.txt
+COPY requirements.txt /opt/awx/requirements.txt
 
 # Final stage
 FROM ubuntu:22.04
