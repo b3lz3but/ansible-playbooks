@@ -1,40 +1,56 @@
 #!/bin/bash
 set -e
 
-# Set default Webmin credentials (override via environment variables if needed)
-WEBMIN_USER=${WEBMIN_USER:-root}
-WEBMIN_PASS=${WEBMIN_PASS:-changeme}
+print_status() {
+    echo "📢 $1"
+}
 
-echo "🔄 Setting Webmin credentials for user '${WEBMIN_USER}'..."
-/usr/share/webmin/changepass.pl /etc/webmin ${WEBMIN_USER} ${WEBMIN_PASS}
-
-echo "🔄 Starting Webmin directly..."
-/usr/share/webmin/miniserv.pl /etc/webmin/miniserv.conf &
-
-# Wait for Webmin to be ready
-max_attempts=30
-attempt=1
-while ! curl -k -s https://localhost:10000 >/dev/null; do
-    if [ "$attempt" -gt "$max_attempts" ]; then
-        echo "⏳ Webmin failed to start after $max_attempts attempts!"
+check_prereqs() {
+    if ! command -v ansible-playbook >/dev/null; then
+        print_status "Ansible not found. Please ensure it's installed."
         exit 1
     fi
-    echo "⏳ Waiting for Webmin to start (attempt $attempt/$max_attempts)..."
-    sleep 1
-    ((attempt++))
+}
+
+print_status "Starting AWX installation..."
+
+# Check prerequisites
+check_prereqs
+
+# Move to AWX installer directory
+cd /opt/awx/installer || {
+    print_status "❌ AWX installer directory not found!"
+    exit 1
+}
+
+# Run AWX installation playbook with progress indicator
+print_status "Running installation playbook..."
+ansible-playbook -i inventory install.yml || {
+    print_status "❌ AWX installation failed. Check logs for details."
+    exit 1
+}
+
+# Wait for AWX services to start
+print_status "Waiting for AWX services to start..."
+for i in {1..30}; do
+    if curl -s -f http://localhost:8052 >/dev/null 2>&1; then
+        break
+    fi
+    echo -n "."
+    sleep 10
+    if [ $i -eq 30 ]; then
+        print_status "❌ AWX failed to start within timeout period"
+        exit 1
+    fi
 done
 
-IP_ADDRESS=$(ip route get 1 | awk '{print $7; exit}')
-if [ -z "$IP_ADDRESS" ]; then
-    IP_ADDRESS=$(hostname -I | awk '{print $1}')
-fi
+# Get AWX server IP
+IP_ADDRESS=$(hostname -I | awk '{print $1}')
 
-echo "🌍 Webmin is available at: https://$IP_ADDRESS:5761"
-echo "👉 Open Webmin and look for the 'Ansible Playbook Runner' module to run playbooks."
+print_status "✅ AWX installation completed successfully!"
+print_status "🌍 AWX is available at: http://$IP_ADDRESS:8052"
+print_status "👉 Default credentials: admin / password"
+print_status "📝 Please change the default password after first login"
 
-if [ -f /var/log/webmin/miniserv.log ]; then
-    exec tail -f /var/log/webmin/miniserv.log
-else
-    echo "Log file not found. Tailing /dev/null instead."
-    exec tail -f /dev/null
-fi
+# Keep container running
+exec tail -f /dev/null

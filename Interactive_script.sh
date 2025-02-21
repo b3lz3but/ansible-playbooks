@@ -1,103 +1,81 @@
 #!/bin/bash
 
-# Script: Interactive Ansible Playbook Runner
-# Description: Provides a GUI to select and run Ansible playbooks
-# Author: System Administrator
-# Last Modified: 2024
+# Source utility functions and logger
+source "$(dirname "$0")/utils.sh"
+source "$(dirname "$0")/logger.sh"
 
-# Color definitions for visibility
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+# Initialize
+load_config
+check_dependencies
 
-# Function to check and install missing dependencies
-check_dependencies() {
-    local deps=(ansible sshpass dialog whiptail)
-    for dep in "${deps[@]}"; do
-        if ! command -v "$dep" &> /dev/null; then
-            echo -e "${RED}Installing $dep...${NC}"
-            apt-get update && apt-get install -y "$dep"
-        fi
-    done
-}
-
-# Function to get server IP and display access link
-get_server_ip() {
-    SERVER_IP=$(hostname -I | awk '{print $1}')
-    echo -e "${BLUE}🌐 Access Webmin Admin Panel at: https://$SERVER_IP:5761${NC}"
-}
-
-# Ensure inventory file exists
-if [ ! -f "/ansible/inventory.ini" ]; then
-    echo -e "${RED}❌ Error: inventory.ini not found! Please add an inventory file.${NC}"
+# Validate inventory
+INVENTORY=$(python3 -c 'import yaml;print(yaml.safe_load(open("'"$(dirname "$0")/config.yaml"'"))["paths"]["inventory"])')
+if [ ! -f "$INVENTORY" ]; then
+    log_error "Inventory file not found: $INVENTORY"
     exit 1
 fi
 
-# Install dependencies if missing
-check_dependencies
+# Check AWX availability
+check_awx_connection
+AWX_AVAILABLE=$?
 
-# Determine available menu command
-if command -v whiptail &> /dev/null; then
-    menu_cmd="whiptail"
-elif command -v dialog &> /dev/null; then
-    menu_cmd="dialog"
-else
-    echo "❌ No menu system found. Falling back to text input."
-    menu_cmd="echo"
+# Get available playbooks
+mapfile -t playbooks < <(get_playbooks)
+
+# Validate playbooks exist
+if [ ${#playbooks[@]} -eq 0 ]; then
+    log_error "No playbooks found!"
+    exit 1
 fi
 
-# Define available playbooks
-playbooks=(
-    update_packages.yml
-    restart_services.yml
-    check_disk_space.yml
-    system_health_monitor.yml
-    security_scan.yml
-    backup_files.yml
-    user_management.yml
-    log_cleanup.yml
-    network_check.yml
-    system_administration.yml
-    networking.yml
-    scripting_automation.yml
-    monitoring_logging.yml
-    security_hardening.yml
-    troubleshooting.yml
-    cloud_management.yml
-    containerization.yml
-    ci_cd.yml
-    database_admin.yml
-    documentation.yml
-    collaboration.yml
-)
-
-# Generate menu options
+# Create menu options
 menu_options=()
 for playbook in "${playbooks[@]}"; do
-    menu_options+=("$playbook" "Run $playbook" OFF)
+    menu_options+=("$playbook" "$(grep '^# Description:' "$PLAYBOOKS_DIR/$playbook" | cut -d':' -f2- || echo "Run $playbook")" OFF)
 done
 
 # Display selection menu
-CHOICE="$($menu_cmd --title 'Ansible Playbook Selection' --checklist \
-    'Select playbooks to run (Space to select, Enter to confirm):' 25 78 15 \
-    "${menu_options[@]}" 3>&1 1>&2 2>&3)"
+CHOICE=$(whiptail --title 'Ansible Playbook Runner' \
+                  --checklist 'Select playbooks to run:' \
+                  25 78 15 "${menu_options[@]}" \
+                  3>&1 1>&2 2>&3)
 
-# Check if any playbooks were selected
-if [[ -z "$CHOICE" ]]; then
-    echo "❌ No playbooks selected. Exiting."
-    exit 1
+# Handle selection
+if [ $? -ne 0 ] || [ -z "$CHOICE" ]; then
+    log_warning "No playbooks selected"
+    exit 0
 fi
 
-# Run selected playbooks
+# Execute selected playbooks
 for playbook in $CHOICE; do
-    ansible-playbook -i /ansible/inventory.ini "/ansible/playbooks/$playbook"
+    playbook=$(echo "$playbook" | tr -d '"')
+    if [ $AWX_AVAILABLE -eq 0 ]; then
+        log_info "Triggering AWX job for $playbook"
+        response=$(curl -s -X POST \
+                       -u "$AWX_USER:$AWX_PASSWORD" \
+                       -H "Content-Type: application/json" \
+                       -d '{"playbook":"'"$playbook"'"}' \
+                       "$AWX_URL/api/$AWX_API_VERSION/job_templates/1/launch/")
+        
+        if [ $? -eq 0 ]; then
+            log_success "AWX job triggered successfully for $playbook"
+        else
+            log_error "Failed to trigger AWX job for $playbook"
+        fi
+    else
+        log_info "Running $playbook locally"
+        if ansible-playbook -i "$INVENTORY" "$PLAYBOOKS_DIR/$playbook"; then
+            log_success "Successfully executed $playbook"
+        else
+            log_error "Failed to execute $playbook"
+        fi
+    fi
 done
 
-echo -e "${GREEN}✅ Playbooks executed successfully!${NC}"
+# Display AWX access information
+if [ $AWX_AVAILABLE -eq 0 ]; then
+    SERVER_IP=$(hostname -I | awk '{print $1}')
+    log_info "Access AWX at: http://$SERVER_IP:8052"
+fi
 
-# Print server IP for access
-get_server_ip
-
-# Keep container running
-tail -f /dev/null
+exit 0

@@ -1,63 +1,77 @@
+# Build stage
+FROM ubuntu:22.04 AS builder
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    AWX_VERSION=23.1.0 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1
+
+# Install security updates and build dependencies
+RUN apt-get update \
+    && apt-get upgrade -y \
+    && apt-get install -y --no-install-recommends \
+    git=1:2.34.* \
+    python3=3.10.* \
+    python3-pip=22.0.* \
+    python3-venv \
+    && python3 -m venv /opt/venv \
+    && . /opt/venv/bin/activate \
+    && git clone -b ${AWX_VERSION} --depth 1 https://github.com/ansible/awx.git /opt/awx \
+    && pip install --upgrade pip wheel setuptools \
+    && pip install -r /opt/awx/requirements.txt
+
+# Final stage
 FROM ubuntu:22.04
 
-# Set environment variables
-ENV DEBIAN_FRONTEND=noninteractive
-ENV TERM=xterm
-ENV TZ=UTC
-ENV ANSIBLE_HOST_KEY_CHECKING=False
-ENV ANSIBLE_FORCE_COLOR=1
-ENV PYTHONUNBUFFERED=1
+LABEL maintainer="Ciprian <ciprian@admintools.io>" \
+    description="AWX (Ansible Tower) container" \
+    version="23.1.0" \
+    security="SECURITY_NIST_APPROVED=true"
 
-# Install system dependencies, including iproute2 for the `ip` command
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-    software-properties-common \
-    curl \
-    ansible \
-    sshpass \
-    dialog \
-    whiptail \
-    iproute2 \
-    python3 \
-    python3-pip \
-    git \
-    wget \
-    perl \
-    libnet-ssleay-perl \
-    libauthen-pam-perl \
-    libio-pty-perl \
-    apt-show-versions \
-    python-is-python3 \
-    unzip && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+ENV DEBIAN_FRONTEND=noninteractive \
+    AWX_VERSION=23.1.0 \
+    PYTHONUNBUFFERED=1 \
+    PATH="/usr/local/bin:${PATH}" \
+    AWX_USER=awx-user \
+    AWX_GROUP=awx-user
 
-# Install Webmin from the official repository
-RUN curl -o setup-repos.sh https://raw.githubusercontent.com/webmin/webmin/master/setup-repos.sh && \
-    echo "y" | sh setup-repos.sh && \
-    apt-get update && \
-    apt-get install -y webmin && \
-    rm -f setup-repos.sh
+# Install runtime dependencies and security updates
+RUN apt-get update \
+    && apt-get upgrade -y \
+    && apt-get install -y --no-install-recommends \
+    docker.io=20.10.* \
+    ansible=2.10.* \
+    curl=7.81.* \
+    ca-certificates \
+    tzdata \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd -r ${AWX_GROUP} \
+    && useradd -r -g ${AWX_GROUP} -d /home/${AWX_USER} -m -s /sbin/nologin ${AWX_USER}
 
-# Ensure Webmin permissions are correct
-RUN chmod -R 755 /etc/webmin || echo "⚠️ Webmin directory not found, skipping chmod"
+# Copy virtual environment from builder
+COPY --from=builder --chown=${AWX_USER}:${AWX_GROUP} /opt/venv /opt/venv
+COPY --from=builder --chown=${AWX_USER}:${AWX_GROUP} /opt/awx /opt/awx
 
-# Install Python dependencies
-COPY requirements.txt /tmp/requirements.txt
-RUN pip3 install -r /tmp/requirements.txt
+WORKDIR /opt/awx/installer
 
-# Copy project files and set working directory
-COPY . /ansible
-WORKDIR /ansible
+COPY --chown=${AWX_USER}:${AWX_GROUP} inventory.ini /opt/awx/installer/inventory
+COPY --chown=${AWX_USER}:${AWX_GROUP} entrypoint.sh /entrypoint.sh
 
-# Copy and set permissions for the entrypoint script
-COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+RUN chmod +x /entrypoint.sh \
+    && chown -R ${AWX_USER}:${AWX_GROUP} /opt/awx \
+    && chmod -R g-w,o-w /opt/awx
 
-# Copy the Webmin module (with module.info and index.cgi) into Webmin's modules directory
-COPY webmin_ansible_module /usr/share/webmin/ansible_module
-RUN chmod -R +x /usr/share/webmin/ansible_module
+# Add security configurations
+RUN echo "fs.suid_dumpable=0" >> /etc/sysctl.conf \
+    && echo "kernel.core_pattern=|/bin/false" >> /etc/sysctl.conf \
+    && chmod 600 /etc/sysctl.conf
 
-EXPOSE 10000
+USER ${AWX_USER}
+
+EXPOSE 8052
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8052/ || exit 1
 
 ENTRYPOINT ["/entrypoint.sh"]

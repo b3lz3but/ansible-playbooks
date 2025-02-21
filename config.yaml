@@ -1,0 +1,23 @@
+awx:
+  url: "http://localhost:8052"
+  user: "admin"
+  password: "password"
+  api_version: "v2"
+paths:
+  playbooks: "/ansible/playbooks"
+  inventory: "/ansible/inventory.ini"
+  logs: "/var/log/ansible-runner"
+dependencies:
+  required:
+    - ansible
+    - sshpass
+    - dialog
+    - whiptail
+    - curl
+    - python3-yaml
+display:
+  colors:
+    success: '\033[0;32m'
+    error: '\033[0;31m'
+    info: '\033[0;34m'
+    reset: '\033[0m'

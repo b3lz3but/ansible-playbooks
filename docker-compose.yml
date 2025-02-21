@@ -1,39 +1,68 @@
+version: "3.8"
+
 services:
-  ansible:
+  awx:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: ansible_controller
+    container_name: awx_controller
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8052:8052"  # Bind to localhost only
     volumes:
-      - .:/ansible:rw
-      - /var/run/docker.sock:/var/run/docker.sock
-    working_dir: /ansible
-    stdin_open: true
-    tty: true
+      - type: volume
+        source: awx_data
+        target: /var/lib/postgresql/data
+      - type: bind
+        source: /var/run/docker.sock
+        target: /var/run/docker.sock
+        read_only: true
     environment:
       - TERM=xterm
-      - DEBIAN_FRONTEND=noninteractive
-      - TZ=UTC
       - ANSIBLE_HOST_KEY_CHECKING=False
       - ANSIBLE_FORCE_COLOR=1
       - PYTHONUNBUFFERED=1
-    security_opt:
-      - no-new-privileges:false
-    networks:
-      ansible_network:
-        ipv4_address: 172.28.0.100
-    ports:
-      - "5761:10000" # Webmin Admin Panel
-    restart: unless-stopped
+      - TZ=UTC
+    env_file: .env
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+        reservations:
+          cpus: '1'
+          memory: 2G
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8052/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     logging:
       driver: "json-file"
       options:
         max-size: "10m"
         max-file: "3"
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      awx_network:
+        ipv4_address: 172.28.0.100
+
+volumes:
+  awx_data:
+    driver: local
+    driver_opts:
+      type: none
+      device: ${PWD}/data
+      o: bind
 
 networks:
-  ansible_network:
+  awx_network:
     driver: bridge
     ipam:
+      driver: default
       config:
         - subnet: 172.28.0.0/16
+    driver_opts:
+      com.docker.network.bridge.name: awx_net
