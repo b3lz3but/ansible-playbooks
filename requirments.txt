@@ -1,0 +1,12 @@
+ansible
+docker
+requests
+PyYAML
+psycopg2
+cryptography
+djangorestframework
+pycurl
+paramiko
+jinja2
+flask
+bcrypt
