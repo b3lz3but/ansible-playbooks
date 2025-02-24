@@ -70,11 +70,14 @@ ENV DEBIAN_FRONTEND=noninteractive \
     VENV_PATH=/opt/venv \
     AWX_PATH=/opt/awx
 
-# Install runtime dependencies
-RUN apt-get update && apt-get install -y \
-    python3-dev \
+# Install essential build dependencies
+RUN apt-get update && apt-get upgrade -y && \
+    apt-get install -y --no-install-recommends \
+    git \
+    python3 \
     python3-pip \
     python3-venv \
+    build-essential \
     libpq-dev \
     libssl-dev \
     libffi-dev \
@@ -82,8 +85,15 @@ RUN apt-get update && apt-get install -y \
     libxslt1-dev \
     libldap2-dev \
     libsasl2-dev \
+    libpython3-dev \
     zlib1g-dev \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
+    make \
+    gcc \
+    pkg-config \
+    libxmlsec1-dev \
+    xmlsec1 \
+    libxmlsec1-openssl \
+    && rm -rf /var/lib/apt/lists/*
 
 # Create dedicated user & group
 RUN groupadd -r ${AWX_GROUP} && \
