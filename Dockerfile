@@ -60,14 +60,24 @@ ENV DEBIAN_FRONTEND=noninteractive \
     AWX_PATH=/opt/awx
 
 # Install runtime dependencies
-RUN apt-get update && apt-get upgrade -y && \
-    apt-get install -y --no-install-recommends \
-    python3-dev python3-venv python3-pip \
-    libffi-dev libssl-dev build-essential \
-    libldap2-dev libsasl2-dev \
-    libpq-dev libxml2-dev libxmlsec1-dev libxmlsec1-openssl \
-    gcc make \
-    && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y \
+    python3-dev \
+    python3-pip \
+    python3-venv \
+    gcc \
+    libpq-dev \
+    libssl-dev \
+    libffi-dev \
+    libxml2-dev \
+    libxslt1-dev \
+    libldap2-dev \
+    libsasl2-dev \
+    libpython3-dev \
+    zlib1g-dev \
+    make \
+    build-essential \
+    pkg-config
+
 
 # Create dedicated user & group
 RUN groupadd -r ${AWX_GROUP} && \
