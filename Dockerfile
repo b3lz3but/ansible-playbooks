@@ -18,6 +18,12 @@ RUN apt-get update && apt-get upgrade -y && \
     python3=3.10.* \
     python3-pip=22.0.* \
     python3-venv \
+    python3-dev \
+    libldap2-dev \
+    libsasl2-dev \
+    libpcre3-dev \
+    libxmlsec1-dev \
+    pkg-config \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
@@ -33,7 +39,7 @@ RUN git clone -b ${AWX_VERSION} --depth 1 https://github.com/ansible/awx.git $AW
 RUN test -f "$AWX_PATH/requirements/requirements.txt" || (echo "ERROR: requirements.txt missing" && exit 1)
 
 # Install Python dependencies
-RUN . $VENV_PATH/bin/activate && pip install -r $AWX_PATH/requirements/requirements.txt
+RUN . $VENV_PATH/bin/activate && pip install --no-cache-dir -r $AWX_PATH/requirements/requirements.txt
 
 # Remove build dependencies to reduce final image size
 RUN apt-get remove -y build-essential && apt-get autoremove -y
@@ -66,6 +72,8 @@ RUN apt-get update && apt-get upgrade -y && \
     curl=7.81.* \
     ca-certificates \
     tzdata \
+    python3-venv \
+    python3-pip \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Create dedicated user & group
