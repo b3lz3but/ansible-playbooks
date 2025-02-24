@@ -1,3 +1,5 @@
+version: "3.8"
+
 services:
   awx:
     build:
@@ -22,7 +24,7 @@ services:
     volumes:
       - ./entrypoint.sh:/entrypoint.sh
       - ./inventory.ini:/opt/awx/installer/inventory
-    command: ["/bin/bash", "/entrypoint.sh"]
+    command: ["/bin/bash", "-c", "chmod +x /entrypoint.sh && /entrypoint.sh"]
 
   awx_postgres:
     image: postgres:14
@@ -32,18 +34,19 @@ services:
       - POSTGRES_DB=awx
       - POSTGRES_USER=awx
       - POSTGRES_PASSWORD=awx_password
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
     networks:
       - awx_network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U awx"]
+      test: ["CMD", "pg_isready", "-U", "awx", "-d", "awx"]
       interval: 10s
+      timeout: 5s
       retries: 5
-      start_period: 30s
-
-volumes:
-  postgres_data:
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
 
 networks:
   awx_network:
+    driver: bridge
+
+volumes:
+  postgres_data:

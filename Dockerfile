@@ -48,7 +48,9 @@ RUN git clone -b ${AWX_VERSION} --depth 1 https://github.com/ansible/awx.git $AW
 RUN test -f "$AWX_PATH/requirements/requirements.txt" || (echo "ERROR: requirements.txt missing" && exit 1)
 
 # Install Python dependencies
-RUN . $VENV_PATH/bin/activate && pip install -r $AWX_PATH/requirements/requirements.txt
+RUN . $VENV_PATH/bin/activate && \
+    pip install --no-cache-dir -r $AWX_PATH/requirements/requirements.txt && \
+    rm -rf ~/.cache/pip
 
 # Remove build dependencies to reduce final image size
 RUN apt-get remove -y build-essential pkg-config make gcc && apt-get autoremove -y
@@ -80,7 +82,6 @@ RUN apt-get update && apt-get upgrade -y && \
     python3 \
     python3-pip \
     python3-venv \
-    build-essential \
     libpq-dev \
     libssl-dev \
     libffi-dev \
@@ -90,9 +91,6 @@ RUN apt-get update && apt-get upgrade -y && \
     libsasl2-dev \
     libpython3-dev \
     zlib1g-dev \
-    make \
-    gcc \
-    pkg-config \
     libxmlsec1-dev \
     xmlsec1 \
     libxmlsec1-openssl \
@@ -114,7 +112,7 @@ COPY --chown=${AWX_USER}:${AWX_GROUP} inventory.ini /opt/awx/installer/inventory
 COPY --chown=${AWX_USER}:${AWX_GROUP} entrypoint.sh /entrypoint.sh
 
 # Ensure scripts have execution permissions
-RUN chmod +x /entrypoint.sh 
+RUN chmod 0750 /entrypoint.sh 
 
 # Security hardening
 RUN echo "fs.suid_dumpable=0" >> /etc/sysctl.conf && \
@@ -132,8 +130,8 @@ USER ${AWX_USER}
 EXPOSE 8052
 
 # Healthcheck for AWX service
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8052/ || exit 1
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=5 \
+    CMD curl -fsSL http://localhost:8052/health || exit 1
 
 # Set entrypoint
 ENTRYPOINT ["/entrypoint.sh"]
