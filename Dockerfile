@@ -31,6 +31,9 @@ RUN apt-get update && apt-get upgrade -y && \
     make \
     gcc \
     pkg-config \
+    libxmlsec1-dev \
+    xmlsec1 \
+    libxmlsec1-openssl \
     && rm -rf /var/lib/apt/lists/*
 
 # Create and activate virtual environment
@@ -70,7 +73,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
     VENV_PATH=/opt/venv \
     AWX_PATH=/opt/awx
 
-# Install essential build dependencies
+# Install essential runtime dependencies
 RUN apt-get update && apt-get upgrade -y && \
     apt-get install -y --no-install-recommends \
     git \
