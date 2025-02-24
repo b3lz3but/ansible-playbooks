@@ -62,13 +62,12 @@ ENV DEBIAN_FRONTEND=noninteractive \
 # Install runtime dependencies
 RUN apt-get update && apt-get upgrade -y && \
     apt-get install -y --no-install-recommends \
-    docker.io \
-    ansible \
-    curl \
-    ca-certificates \
-    tzdata \
-    libpq-dev \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
+    python3-dev python3-venv python3-pip \
+    libffi-dev libssl-dev build-essential \
+    libldap2-dev libsasl2-dev \
+    libpq-dev libxml2-dev libxmlsec1-dev libxmlsec1-openssl \
+    gcc make \
+    && rm -rf /var/lib/apt/lists/*
 
 # Create dedicated user & group
 RUN groupadd -r ${AWX_GROUP} && \
