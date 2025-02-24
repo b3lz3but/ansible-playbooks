@@ -1,134 +1,67 @@
-# =========================================
-# === Build Stage: Compile & Install ===
-# =========================================
-FROM ubuntu:22.04 AS builder
+#!/usr/bin/env bash
+set -e  # Exit immediately if a command exits with a non-zero status
 
-# Set environment variables for build process
-ENV DEBIAN_FRONTEND=noninteractive \
-    AWX_VERSION=24.6.0 \
-    PYTHONUNBUFFERED=1 \
-    PIP_NO_CACHE_DIR=1 \
-    VENV_PATH=/opt/venv \
-    AWX_PATH=/opt/awx
+# Function to print status messages
+print_status() {
+    echo -e "\n📢 $1"
+}
 
-# Install essential build dependencies
-RUN apt-get update && apt-get upgrade -y && \
-    apt-get install -y --no-install-recommends \
-    git \
-    python3 \
-    python3-pip \
-    python3-venv \
-    build-essential \
-    libpq-dev \
-    libssl-dev \
-    libffi-dev \
-    libxml2-dev \
-    libxslt1-dev \
-    libldap2-dev \
-    libsasl2-dev \
-    libpython3-dev \
-    zlib1g-dev \
-    make \
-    gcc \
-    pkg-config \
-    && rm -rf /var/lib/apt/lists/*
+# Ensure PostgreSQL is available before starting AWX
+print_status "🔍 Checking PostgreSQL connectivity..."
+until PGPASSWORD="${AWX_DB_PASSWORD}" psql -h "${AWX_DB_HOST}" -U "${AWX_DB_USER}" -d "${AWX_DB_NAME}" -c '\q' >/dev/null 2>&1; do
+  print_status "⏳ Waiting for PostgreSQL to be available..."
+  sleep 5
+done
 
-# Create and activate virtual environment
-RUN python3 -m venv $VENV_PATH && \
-    . $VENV_PATH/bin/activate && \
-    pip install --upgrade pip wheel setuptools
+print_status "✅ PostgreSQL is available."
 
-# Clone AWX repository (specific version)
-RUN git clone -b ${AWX_VERSION} --depth 1 https://github.com/ansible/awx.git $AWX_PATH
+# Check if Ansible is installed
+if ! command -v ansible-playbook >/dev/null 2>&1; then
+    print_status "❌ ERROR: Ansible not found! Ensure it's installed inside the container."
+    exit 1
+fi
 
-# Ensure requirements file exists
-RUN test -f "$AWX_PATH/requirements/requirements.txt" || (echo "ERROR: requirements.txt missing" && exit 1)
+# Move to the AWX installer directory
+if [ ! -d "/opt/awx/installer" ]; then
+    print_status "❌ ERROR: AWX installer directory not found!"
+    exit 1
+fi
+cd /opt/awx/installer
 
-# Install Python dependencies
-RUN . $VENV_PATH/bin/activate && \
-    pip install -r $AWX_PATH/requirements/requirements.txt && \
-    rm -rf ~/.cache/pip
+# Ensure `install.yml` playbook exists
+if [ ! -f "install.yml" ]; then
+    print_status "❌ ERROR: install.yml playbook is missing!"
+    exit 1
+fi
 
-# Remove build dependencies to reduce final image size
-RUN apt-get remove -y build-essential pkg-config make gcc && apt-get autoremove -y
+print_status "🚀 Starting AWX installation using Ansible..."
 
-# =========================================
-# === Final Runtime Stage ===
-# =========================================
-FROM ubuntu:22.04
+# Run the AWX installation playbook
+ansible-playbook -i inventory install.yml || {
+    print_status "❌ ERROR: AWX installation failed! Check logs for details."
+    exit 1
+}
 
-LABEL maintainer="Ciprian <ciprian@admintools.io>" \
-    description="AWX (Ansible Tower) container" \
-    version="24.6.0" \
-    security="SECURITY_NIST_APPROVED=true"
+# Wait for AWX services to become available
+print_status "⏳ Waiting for AWX services to start..."
+for i in {1..30}; do
+    if curl -fsSL http://localhost:8052/health >/dev/null 2>&1; then
+        break
+    fi
+    sleep 10
+    if [ $i -eq 30 ]; then
+        print_status "❌ ERROR: AWX failed to start within the timeout period."
+        exit 1
+    fi
+done
 
-# Set environment variables
-ENV DEBIAN_FRONTEND=noninteractive \
-    AWX_VERSION=24.6.0 \
-    PYTHONUNBUFFERED=1 \
-    PATH="/usr/local/bin:${PATH}" \
-    AWX_USER=awx-user \
-    AWX_GROUP=awx-group \
-    VENV_PATH=/opt/venv \
-    AWX_PATH=/opt/awx
+# Get server IP
+IP_ADDRESS=$(hostname -I | awk '{print $1}')
 
-# Install essential runtime dependencies
-RUN apt-get update && apt-get upgrade -y && \
-    apt-get install -y --no-install-recommends \
-    git \
-    python3 \
-    python3-pip \
-    python3-venv \
-    libpq-dev \
-    libssl-dev \
-    libffi-dev \
-    libxml2-dev \
-    libxslt1-dev \
-    libldap2-dev \
-    libsasl2-dev \
-    libpython3-dev \
-    zlib1g-dev \
-    libxmlsec1-dev \
-    xmlsec1 \
-    libxmlsec1-openssl \
-    && rm -rf /var/lib/apt/lists/*
+print_status "✅ AWX installation completed successfully!"
+print_status "🌍 AWX is available at: http://$IP_ADDRESS:8052"
+print_status "👉 Default credentials: admin / password"
+print_status "📝 Please change the default password after first login"
 
-# Create dedicated user & group
-RUN groupadd -r ${AWX_GROUP} && \
-    useradd -r -g ${AWX_GROUP} -d /home/${AWX_USER} -m -s /sbin/nologin ${AWX_USER}
-
-# Copy built application from builder stage
-COPY --from=builder --chown=${AWX_USER}:${AWX_GROUP} $VENV_PATH $VENV_PATH
-COPY --from=builder --chown=${AWX_USER}:${AWX_GROUP} $AWX_PATH $AWX_PATH
-
-# Set working directory
-WORKDIR $AWX_PATH/installer
-
-# Copy configuration files
-COPY --chown=${AWX_USER}:${AWX_GROUP} inventory.ini /opt/awx/installer/inventory
-COPY --chown=${AWX_USER}:${AWX_GROUP} entrypoint.sh /entrypoint.sh
-
-# Ensure scripts have execution permissions
-RUN chmod 0750 /entrypoint.sh 
-
-# Security hardening
-RUN echo "fs.suid_dumpable=0" >> /etc/sysctl.conf && \
-    echo "kernel.core_pattern=|/bin/false" >> /etc/sysctl.conf && \
-    chmod 600 /etc/sysctl.conf
-
-# Set file ownership at the end (after all copies)
-RUN chown -R ${AWX_USER}:${AWX_GROUP} $AWX_PATH && \
-    chmod -R g-w,o-w $AWX_PATH
-
-# Run as non-root user
-USER ${AWX_USER}
-
-# Expose necessary ports
-EXPOSE 8052
-
-# Healthcheck for AWX service
-HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=5 \
-    CMD curl -fsSL http://localhost:8052/health || exit 1
-
-# Set entrypoint
-ENTRYPOINT ["/entrypoint.sh"]
+# Keep the container running
+exec tail -f /dev/null
