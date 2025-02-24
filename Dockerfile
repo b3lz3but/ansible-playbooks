@@ -20,6 +20,17 @@ RUN apt-get update && apt-get upgrade -y && \
     python3-venv \
     build-essential \
     libpq-dev \
+    libssl-dev \
+    libffi-dev \
+    libxml2-dev \
+    libxslt1-dev \
+    libldap2-dev \
+    libsasl2-dev \
+    libpython3-dev \
+    zlib1g-dev \
+    make \
+    gcc \
+    pkg-config \
     && rm -rf /var/lib/apt/lists/*
 
 # Create and activate virtual environment
@@ -37,7 +48,7 @@ RUN test -f "$AWX_PATH/requirements/requirements.txt" || (echo "ERROR: requireme
 RUN . $VENV_PATH/bin/activate && pip install -r $AWX_PATH/requirements/requirements.txt
 
 # Remove build dependencies to reduce final image size
-RUN apt-get remove -y build-essential && apt-get autoremove -y
+RUN apt-get remove -y build-essential pkg-config make gcc && apt-get autoremove -y
 
 # =========================================
 # === Final Runtime Stage ===
@@ -64,7 +75,6 @@ RUN apt-get update && apt-get install -y \
     python3-dev \
     python3-pip \
     python3-venv \
-    gcc \
     libpq-dev \
     libssl-dev \
     libffi-dev \
@@ -72,12 +82,8 @@ RUN apt-get update && apt-get install -y \
     libxslt1-dev \
     libldap2-dev \
     libsasl2-dev \
-    libpython3-dev \
     zlib1g-dev \
-    make \
-    build-essential \
-    pkg-config
-
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Create dedicated user & group
 RUN groupadd -r ${AWX_GROUP} && \
@@ -95,14 +101,16 @@ COPY --chown=${AWX_USER}:${AWX_GROUP} inventory.ini /opt/awx/installer/inventory
 COPY --chown=${AWX_USER}:${AWX_GROUP} entrypoint.sh /entrypoint.sh
 
 # Ensure scripts have execution permissions
-RUN chmod +x /entrypoint.sh && \
-    chown -R ${AWX_USER}:${AWX_GROUP} $AWX_PATH && \
-    chmod -R g-w,o-w $AWX_PATH
+RUN chmod +x /entrypoint.sh 
 
 # Security hardening
 RUN echo "fs.suid_dumpable=0" >> /etc/sysctl.conf && \
     echo "kernel.core_pattern=|/bin/false" >> /etc/sysctl.conf && \
     chmod 600 /etc/sysctl.conf
+
+# Set file ownership at the end (after all copies)
+RUN chown -R ${AWX_USER}:${AWX_GROUP} $AWX_PATH && \
+    chmod -R g-w,o-w $AWX_PATH
 
 # Run as non-root user
 USER ${AWX_USER}
