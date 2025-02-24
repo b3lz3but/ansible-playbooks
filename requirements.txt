@@ -10,3 +10,4 @@ paramiko
 jinja2
 flask
 bcrypt
+netaddr

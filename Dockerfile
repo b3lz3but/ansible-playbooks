@@ -14,17 +14,12 @@ ENV DEBIAN_FRONTEND=noninteractive \
 # Install essential build dependencies
 RUN apt-get update && apt-get upgrade -y && \
     apt-get install -y --no-install-recommends \
-    git=1:2.34.* \
-    python3=3.10.* \
-    python3-pip=22.0.* \
+    git \
+    python3 \
+    python3-pip \
     python3-venv \
-    python3-dev \
-    libldap2-dev \
-    libsasl2-dev \
-    libpcre3-dev \
-    libxmlsec1-dev \
-    pkg-config \
     build-essential \
+    libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Create and activate virtual environment
@@ -35,11 +30,11 @@ RUN python3 -m venv $VENV_PATH && \
 # Clone AWX repository (specific version)
 RUN git clone -b ${AWX_VERSION} --depth 1 https://github.com/ansible/awx.git $AWX_PATH
 
-# Validate that the requirements file exists
+# Ensure requirements file exists
 RUN test -f "$AWX_PATH/requirements/requirements.txt" || (echo "ERROR: requirements.txt missing" && exit 1)
 
 # Install Python dependencies
-RUN . $VENV_PATH/bin/activate && pip install --no-cache-dir -r $AWX_PATH/requirements/requirements.txt
+RUN . $VENV_PATH/bin/activate && pip install -r $AWX_PATH/requirements/requirements.txt
 
 # Remove build dependencies to reduce final image size
 RUN apt-get remove -y build-essential && apt-get autoremove -y
@@ -67,13 +62,12 @@ ENV DEBIAN_FRONTEND=noninteractive \
 # Install runtime dependencies
 RUN apt-get update && apt-get upgrade -y && \
     apt-get install -y --no-install-recommends \
-    docker.io=20.10.* \
-    ansible=2.10.* \
-    curl=7.81.* \
+    docker.io \
+    ansible \
+    curl \
     ca-certificates \
     tzdata \
-    python3-venv \
-    python3-pip \
+    libpq-dev \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Create dedicated user & group
@@ -91,7 +85,7 @@ WORKDIR $AWX_PATH/installer
 COPY --chown=${AWX_USER}:${AWX_GROUP} inventory.ini /opt/awx/installer/inventory
 COPY --chown=${AWX_USER}:${AWX_GROUP} entrypoint.sh /entrypoint.sh
 
-# Set permissions for scripts and security policies
+# Ensure scripts have execution permissions
 RUN chmod +x /entrypoint.sh && \
     chown -R ${AWX_USER}:${AWX_GROUP} $AWX_PATH && \
     chmod -R g-w,o-w $AWX_PATH

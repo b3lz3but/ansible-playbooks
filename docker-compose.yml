@@ -1,37 +1,49 @@
 services:
-  postgres:
+  awx:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: awx
+    restart: unless-stopped
+    environment:
+      - AWX_VERSION=24.6.0
+      - AWX_DB_HOST=awx_postgres
+      - AWX_DB_PORT=5432
+      - AWX_DB_NAME=awx
+      - AWX_DB_USER=awx
+      - AWX_DB_PASSWORD=awx_password
+    depends_on:
+      awx_postgres:
+        condition: service_healthy
+    ports:
+      - "8052:8052"
+    networks:
+      - awx_network
+    volumes:
+      - ./entrypoint.sh:/entrypoint.sh
+      - ./inventory.ini:/opt/awx/installer/inventory
+    command: ["/bin/bash", "/entrypoint.sh"]
+
+  awx_postgres:
     image: postgres:14
     container_name: awx_postgres
-    restart: always
+    restart: unless-stopped
     environment:
-      POSTGRES_DB: awx
-      POSTGRES_USER: awx
-      POSTGRES_PASSWORD: awxpassword
+      - POSTGRES_DB=awx
+      - POSTGRES_USER=awx
+      - POSTGRES_PASSWORD=awx_password
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - awx_network
-
-  awx:
-    build: .
-    container_name: awx
-    restart: always
-    depends_on:
-      - postgres
-    ports:
-      - "8052:8052"
-    environment:
-      DATABASE_HOST: postgres
-      DATABASE_PORT: 5432
-      DATABASE_NAME: awx
-      DATABASE_USER: awx
-      DATABASE_PASSWORD: awxpassword
-    networks:
-      - awx_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U awx"]
+      interval: 10s
+      retries: 5
+      start_period: 30s
 
 volumes:
   postgres_data:
 
 networks:
   awx_network:
-    driver: bridge

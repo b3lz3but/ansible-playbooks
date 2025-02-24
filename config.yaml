@@ -7,6 +7,8 @@ paths:
   playbooks: "/ansible/playbooks"
   inventory: "/ansible/inventory.ini"
   logs: "/var/log/ansible-runner"
+  config: "/etc/ansible/config.yaml" # Added path for config management
+  awx_data: "/opt/awx/data" # Added AWX data storage path
 dependencies:
   required:
     - ansible
@@ -15,9 +17,27 @@ dependencies:
     - whiptail
     - curl
     - python3-yaml
+    - jq # Added jq for JSON parsing in AWX API calls
+    - postgresql-client # Added PostgreSQL client for direct DB access if needed
 display:
   colors:
     success: '\033[0;32m'
     error: '\033[0;31m'
+    warning: '\033[0;33m' # Added warning color
     info: '\033[0;34m'
     reset: '\033[0m'
+security:
+  enforce_ssl: true # Ensures HTTPS is used in AWX connections
+  secure_cookies: true # Enables secure HTTP-only cookies
+network:
+  proxy_enabled: false
+  proxy_url: ""
+  proxy_port: ""
+logging:
+  level: "DEBUG" # Adjusted log level (DEBUG, INFO, WARNING, ERROR)
+  format: "[%(asctime)s] [%(levelname)s] %(message)s"
+  retention_days: 7 # Keeps logs for 7 days before rotation
+awx_defaults:
+  job_timeout: 3600 # Default job timeout in seconds
+  max_failures: 3 # Maximum allowed failures before stopping retries
+  execution_nodes: ["node1", "node2"] # Added execution node mapping for distributed AWX
