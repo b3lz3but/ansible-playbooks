@@ -1,5 +1,4 @@
-version: "3.8"
-
+version: "3.9"
 services:
   awx:
     build:
@@ -13,27 +12,49 @@ services:
       - AWX_DB_PORT=5432
       - AWX_DB_NAME=awx
       - AWX_DB_USER=awx
-      - AWX_DB_PASSWORD=awx_password
+      - AWX_DB_PASSWORD=${AWX_DB_PASSWORD:?Database password not set}
     depends_on:
       awx_postgres:
         condition: service_healthy
     ports:
-      - "8052:8052"
+      - "127.0.0.1:8052:8052" # Restrict to localhost
     networks:
       - awx_network
     volumes:
-      - ./entrypoint.sh:/entrypoint.sh
-      - ./inventory.ini:/opt/awx/installer/inventory
+      - type: bind
+        source: ./entrypoint.sh
+        target: /entrypoint.sh
+        read_only: true
+      - type: bind
+        source: ./utils.sh
+        target: /opt/awx/utils.sh
+        read_only: true
+      - type: bind
+        source: ./inventory.ini
+        target: /opt/awx/installer/inventory
+        read_only: true
+      - type: bind
+        source: ./config.yaml
+        target: /opt/awx/config.yaml
+        read_only: true
     command: ["/bin/bash", "-c", "chmod +x /entrypoint.sh && /entrypoint.sh"]
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8052/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   awx_postgres:
-    image: postgres:14
+    image: postgres:14-alpine # Using alpine for smaller image
     container_name: awx_postgres
     restart: unless-stopped
     environment:
       - POSTGRES_DB=awx
       - POSTGRES_USER=awx
-      - POSTGRES_PASSWORD=awx_password
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?Database password not set}
+      - POSTGRES_HOST_AUTH_METHOD=scram-sha-256
     networks:
       - awx_network
     healthcheck:
@@ -43,10 +64,14 @@ services:
       retries: 5
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    security_opt:
+      - no-new-privileges:true
 
 networks:
   awx_network:
     driver: bridge
+    internal: true # Prevent external network access
 
 volumes:
   postgres_data:
+    driver: local

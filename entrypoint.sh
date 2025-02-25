@@ -1,100 +1,165 @@
 #!/usr/bin/env bash
-set -e  # Exit immediately if a command exits with a non-zero status
+
+# Enable strict mode for safety
+set -euo pipefail
+IFS=$'\n\t'
 set -x  # Debugging - print each command before executing
 
-# Source utility scripts
-source "/opt/awx/utils.sh"
-source "/opt/awx/logger.sh"
+# Constants with improved organization
+declare -r MAX_RETRIES=30
+declare -r WAIT_SECONDS=5
+declare -ra REQUIRED_PACKAGES=(postgresql-client ansible curl)
+declare -ra REQUIRED_ENV_VARS=(AWX_DB_HOST AWX_DB_USER AWX_DB_PASSWORD AWX_DB_NAME)
+declare -r AWX_PORT=8052
+declare -r AWX_INSTALLER_DIR="/opt/awx/installer"
+declare -r AWX_UTILS="/opt/awx/utils.sh"
+declare -r AWX_LOGGER="/opt/awx/logger.sh"
 
-# Function to print status messages
+# Function to print status messages with timestamp and color
 print_status() {
-    echo -e "\n📢 $1"
+    local level=$1
+    local message=$2
+    local timestamp
+    timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+    case "$level" in
+        "INFO")  echo -e "\n[\033[0;32m${timestamp}\033[0m] 📢 ${message}" ;;
+        "WARN")  echo -e "\n[\033[0;33m${timestamp}\033[0m] ⚠️ ${message}" ;;
+        "ERROR") echo -e "\n[\033[0;31m${timestamp}\033[0m] ❌ ${message}" ;;
+        *)       echo -e "\n[${timestamp}] ${message}" ;;
+    esac
 }
 
-# Ensure required environment variables are set
-if [[ -z "$AWX_DB_HOST" || -z "$AWX_DB_USER" || -z "$AWX_DB_PASSWORD" || -z "$AWX_DB_NAME" ]]; then
-    print_status "❌ ERROR: Required database environment variables are not set!"
-    exit 1
-fi
+# Function to check required environment variables with improved error handling
+check_env_vars() {
+    local missing_vars=()
+    for var in "${REQUIRED_ENV_VARS[@]}"; do
+        if [[ -z "${!var:-}" ]]; then
+            missing_vars+=("$var")
+        fi
+    done
 
-# Ensure PostgreSQL is installed
-print_status "🔍 Checking if PostgreSQL client is installed..."
-if ! command -v psql &>/dev/null; then
-    print_status "⚠️ PostgreSQL client not found! Installing..."
-    apt-get update && apt-get install -y postgresql-client || {
-        print_status "❌ ERROR: Failed to install PostgreSQL client!"
+    if [[ ${#missing_vars[@]} -gt 0 ]]; then
+        print_status "ERROR" "Missing required environment variables: ${missing_vars[*]}"
+        exit 1
+    fi
+    print_status "INFO" "Environment validation successful"
+}
+
+# Function to check and install required packages with better error reporting
+check_dependencies() {
+    local missing_packages=()
+    for cmd in "${REQUIRED_PACKAGES[@]}"; do
+        if ! command -v "$cmd" &>/dev/null; then
+            missing_packages+=("$cmd")
+        fi
+    done
+
+    if [[ ${#missing_packages[@]} -gt 0 ]]; then
+        print_status "WARN" "Installing missing packages: ${missing_packages[*]}"
+        if ! apt-get update && apt-get install -y "${missing_packages[@]}"; then
+            print_status "ERROR" "Failed to install required packages!"
+            exit 1
+        fi
+    fi
+    print_status "INFO" "All dependencies are satisfied"
+}
+
+# Function to wait for PostgreSQL with improved connection testing
+wait_for_postgres() {
+    local counter=0
+    while ! PGPASSWORD="${AWX_DB_PASSWORD}" psql -h "${AWX_DB_HOST}" -U "${AWX_DB_USER}" -d "${AWX_DB_NAME}" -c '\l' >/dev/null 2>&1; do
+        ((counter++))
+        if [[ "$counter" -ge "$MAX_RETRIES" ]]; then
+            print_status "ERROR" "PostgreSQL is not available after $MAX_RETRIES attempts"
+            exit 1
+        fi
+        print_status "INFO" "Waiting for PostgreSQL... (Attempt: ${counter}/${MAX_RETRIES})"
+        sleep "$WAIT_SECONDS"
+    done
+    print_status "INFO" "PostgreSQL is available"
+}
+
+# Function to check AWX health with timeout
+wait_for_awx() {
+    local timeout=300  # 5 minutes timeout
+    local start_time
+    start_time=$(date +%s)
+
+    while true; do
+        if curl -fsSL "http://localhost:${AWX_PORT}/health" >/dev/null 2>&1; then
+            print_status "INFO" "AWX is up and running!"
+            return 0
+        fi
+
+        if (( $(date +%s) - start_time >= timeout )); then
+            print_status "ERROR" "AWX failed to start within ${timeout} seconds"
+            exit 1
+        fi
+
+        print_status "INFO" "Waiting for AWX... ($(( ($(date +%s) - start_time) ))/${timeout}s)"
+        sleep 10
+    done
+}
+
+# Main execution with improved error handling and cleanup
+main() {
+    # Cleanup function
+    cleanup() {
+        print_status "INFO" "Shutting down gracefully..."
+        kill "$(jobs -p)" 2>/dev/null || true
+        exit 0
+    }
+
+    trap cleanup TERM INT
+
+    print_status "INFO" "🚀 Starting AWX installation process"
+
+    # Load utility scripts
+    for script in "$AWX_UTILS" "$AWX_LOGGER"; do
+        if [[ -f "$script" ]]; then
+            # shellcheck source=/dev/null
+            source "$script"
+        else
+            print_status "ERROR" "Required script $script not found!"
+            exit 1
+        fi
+    done
+
+    check_env_vars
+    check_dependencies
+    wait_for_postgres
+
+    if [[ ! -d "$AWX_INSTALLER_DIR" ]]; then
+        print_status "ERROR" "AWX installer directory not found!"
         exit 1
     }
-fi
-print_status "✅ PostgreSQL client is installed."
 
-# Ensure PostgreSQL is available before starting AWX
-print_status "🔍 Checking PostgreSQL connectivity..."
-MAX_RETRIES=30
-WAIT_SECONDS=5
-COUNTER=0
+    cd "$AWX_INSTALLER_DIR" || exit 1
 
-while ! PGPASSWORD="${AWX_DB_PASSWORD}" psql -h "${AWX_DB_HOST}" -U "${AWX_DB_USER}" -d "${AWX_DB_NAME}" -c 'SELECT 1;' >/dev/null 2>&1; do
-    if [[ "$COUNTER" -ge "$MAX_RETRIES" ]]; then
-        print_status "❌ ERROR: PostgreSQL is not available after $MAX_RETRIES attempts. Exiting..."
+    if [[ ! -f "install.yml" ]]; then
+        print_status "ERROR" "install.yml playbook is missing!"
+        exit 1
+    }
+
+    print_status "INFO" "📦 Running AWX installation playbook"
+    if ! ansible-playbook -i inventory install.yml; then
+        print_status "ERROR" "AWX installation failed! Check logs for details."
         exit 1
     fi
 
-    print_status "⏳ Waiting for PostgreSQL to be available... (Attempt: $((COUNTER + 1))/$MAX_RETRIES)"
-    sleep "$WAIT_SECONDS"
-    ((COUNTER++))
-done
+    wait_for_awx
 
-print_status "✅ PostgreSQL is available."
+    local ip_address
+    ip_address=$(hostname -I | awk '{print $1}')
 
-# Check if Ansible is installed
-print_status "🔍 Checking if Ansible is installed..."
-if ! command -v ansible-playbook &>/dev/null; then
-    print_status "❌ ERROR: Ansible not found! Ensure it's installed inside the container."
-    exit 1
-fi
-print_status "✅ Ansible is installed."
+    print_status "INFO" "✅ AWX installation completed successfully!"
+    print_status "INFO" "🌍 AWX is available at: http://${ip_address}:${AWX_PORT}"
+    print_status "INFO" "👉 Default credentials: admin / password"
+    print_status "INFO" "📝 Please change the default password after first login"
 
-# Move to the AWX installer directory
-if [ ! -d "/opt/awx/installer" ]; then
-    print_status "❌ ERROR: AWX installer directory not found!"
-    exit 1
-fi
-cd /opt/awx/installer
-
-# Ensure `install.yml` playbook exists
-if [ ! -f "install.yml" ]; then
-    print_status "❌ ERROR: install.yml playbook is missing!"
-    exit 1
-fi
-
-print_status "🚀 Starting AWX installation using Ansible..."
-ansible-playbook -i inventory install.yml || {
-    print_status "❌ ERROR: AWX installation failed! Check logs for details."
-    exit 1
+    # Keep container running
+    sleep infinity & wait
 }
 
-# Wait for AWX services to become available
-print_status "⏳ Waiting for AWX services to start..."
-for i in {1..30}; do
-    if curl -fsSL http://localhost:8052/health >/dev/null 2>&1; then
-        break
-    fi
-    print_status "⌛ Still waiting for AWX to become available... (Attempt: $i/30)"
-    sleep 10
-    if [[ "$i" -eq 30 ]]; then
-        print_status "❌ ERROR: AWX failed to start within the timeout period."
-        exit 1
-    fi
-done
-
-# Get server IP
-IP_ADDRESS=$(hostname -I | awk '{print $1}')
-
-print_status "✅ AWX installation completed successfully!"
-print_status "🌍 AWX is available at: http://$IP_ADDRESS:8052"
-print_status "👉 Default credentials: admin / password"
-print_status "📝 Please change the default password after first login"
-
-# Keep the container running with a proper process
-exec /bin/bash -c "trap : TERM INT; sleep infinity & wait"
+# Execute main function
+main "$@"
