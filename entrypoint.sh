@@ -8,8 +8,8 @@ set -x  # Debugging - print each command before executing
 # Constants with improved organization
 declare -r MAX_RETRIES=30
 declare -r WAIT_SECONDS=5
-declare -ra REQUIRED_PACKAGES=(postgresql-client ansible curl)
-declare -ra REQUIRED_ENV_VARS=(AWX_DB_HOST AWX_DB_USER AWX_DB_PASSWORD AWX_DB_NAME)
+declare -ra REQUIRED_PACKAGES=("postgresql-client" "ansible" "curl")
+declare -ra REQUIRED_ENV_VARS=("AWX_DB_HOST" "AWX_DB_USER" "AWX_DB_PASSWORD" "AWX_DB_NAME")
 declare -r AWX_PORT=8052
 declare -r AWX_INSTALLER_DIR="/opt/awx/installer"
 declare -r AWX_UTILS="/opt/awx/utils.sh"
@@ -29,7 +29,7 @@ print_status() {
     esac
 }
 
-# Function to check required environment variables with improved error handling
+# Function to check required environment variables
 check_env_vars() {
     local missing_vars=()
     for var in "${REQUIRED_ENV_VARS[@]}"; do
@@ -45,7 +45,7 @@ check_env_vars() {
     print_status "INFO" "Environment validation successful"
 }
 
-# Function to check and install required packages with better error reporting
+# Function to check and install required packages
 check_dependencies() {
     local missing_packages=()
     for cmd in "${REQUIRED_PACKAGES[@]}"; do
@@ -64,22 +64,23 @@ check_dependencies() {
     print_status "INFO" "All dependencies are satisfied"
 }
 
-# Function to wait for PostgreSQL with improved connection testing
+# Function to wait for PostgreSQL
 wait_for_postgres() {
     local counter=0
+    print_status "INFO" "🔍 Checking PostgreSQL connectivity..."
     while ! PGPASSWORD="${AWX_DB_PASSWORD}" psql -h "${AWX_DB_HOST}" -U "${AWX_DB_USER}" -d "${AWX_DB_NAME}" -c '\l' >/dev/null 2>&1; do
         ((counter++))
         if [[ "$counter" -ge "$MAX_RETRIES" ]]; then
             print_status "ERROR" "PostgreSQL is not available after $MAX_RETRIES attempts"
             exit 1
         fi
-        print_status "INFO" "Waiting for PostgreSQL... (Attempt: ${counter}/${MAX_RETRIES})"
+        print_status "INFO" "⏳ Waiting for PostgreSQL... (Attempt: ${counter}/${MAX_RETRIES})"
         sleep "$WAIT_SECONDS"
     done
-    print_status "INFO" "PostgreSQL is available"
+    print_status "INFO" "✅ PostgreSQL is available"
 }
 
-# Function to check AWX health with timeout
+# Function to wait for AWX services
 wait_for_awx() {
     local timeout=300  # 5 minutes timeout
     local start_time
@@ -87,7 +88,7 @@ wait_for_awx() {
 
     while true; do
         if curl -fsSL "http://localhost:${AWX_PORT}/health" >/dev/null 2>&1; then
-            print_status "INFO" "AWX is up and running!"
+            print_status "INFO" "✅ AWX is up and running!"
             return 0
         fi
 
@@ -96,16 +97,16 @@ wait_for_awx() {
             exit 1
         fi
 
-        print_status "INFO" "Waiting for AWX... ($(( ($(date +%s) - start_time) ))/${timeout}s)"
+        print_status "INFO" "⌛ Waiting for AWX... ($(( $(date +%s) - start_time ))/${timeout}s)"
         sleep 10
     done
 }
 
-# Main execution with improved error handling and cleanup
+# Main execution
 main() {
-    # Cleanup function
+    # Cleanup function to handle shutdown signals
     cleanup() {
-        print_status "INFO" "Shutting down gracefully..."
+        print_status "INFO" "🔄 Shutting down gracefully..."
         kill "$(jobs -p)" 2>/dev/null || true
         exit 0
     }
@@ -129,17 +130,18 @@ main() {
     check_dependencies
     wait_for_postgres
 
+    # Verify AWX installer directory
     if [[ ! -d "$AWX_INSTALLER_DIR" ]]; then
         print_status "ERROR" "AWX installer directory not found!"
         exit 1
-    }
+    fi
 
     cd "$AWX_INSTALLER_DIR" || exit 1
 
     if [[ ! -f "install.yml" ]]; then
         print_status "ERROR" "install.yml playbook is missing!"
         exit 1
-    }
+    fi
 
     print_status "INFO" "📦 Running AWX installation playbook"
     if ! ansible-playbook -i inventory install.yml; then
