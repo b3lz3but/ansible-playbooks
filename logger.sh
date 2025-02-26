@@ -12,7 +12,7 @@ fi
 eval $(python3 -c 'import yaml;print("\n".join([f"{k.upper()}=\"{v}\"" for k,v in yaml.safe_load(open("'"$CONFIG_FILE"'"))["display"]["colors"].items()]))')
 
 # Load log file path
-LOG_FILE=$(python3 -c 'import yaml; print(yaml.safe_load(open("/opt/awx/config.yaml"))["paths"]["logs"] + "/ansible-runner.log")')
+LOG_FILE=$(python3 -c 'import yaml; print(yaml.safe_load(open("'"$CONFIG_FILE"'"))["paths"]["logs"] + "/ansible-runner.log")')
 
 # Create log directory if it doesn't exist
 mkdir -p "$(dirname "$LOG_FILE")"
