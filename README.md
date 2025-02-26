@@ -45,8 +45,10 @@ ansible-playbooks/
 │   ├── documentation.yml
 │   ├── collaboration.yml
 │── roles/                    # Ansible roles (if applicable)
-│── templates/                 # Jinja2 templates (if any)
-│── files/                      # Static files (e.g., SSH keys, scripts)
+│── templates/                # Jinja2 templates (if any)
+│── files/                    # Static files (e.g., SSH keys, scripts)
+│── docker-compose.yml        # Docker Compose file for containerized services
+│── .env.awx                  # Environment variables for AWX (if applicable)
 ```
 
 ## 🚀 How to Use
