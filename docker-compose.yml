@@ -1,4 +1,4 @@
-version: "3.9"  # Recommend using recent version
+version: "3.9"  # Recommended to use the latest Compose version
 
 services:
   awx:
@@ -14,6 +14,8 @@ services:
       - AWX_DB_NAME=awx
       - AWX_DB_USER=awx
       - AWX_DB_PASSWORD=${AWX_DB_PASSWORD:?Database password not set}
+      - AWX_ADMIN_USER=${AWX_ADMIN_USER:-admin}
+      - AWX_ADMIN_PASSWORD=${AWX_ADMIN_PASSWORD:-password}
     depends_on:
       awx_postgres:
         condition: service_healthy
@@ -22,23 +24,18 @@ services:
     networks:
       - awx_network
     volumes:
-      - type: volume
-        source: awx_entrypoint
-        target: /entrypoint.sh
-      - type: volume
-        source: awx_utils
-        target: /opt/awx/utils.sh
-      - type: volume
-        source: awx_inventory
-        target: /opt/awx/installer/inventory
-      - type: volume
-        source: awx_config
-        target: /opt/awx/config.yaml
+      - ./entrypoint.sh:/entrypoint.sh
+      - ./utils.sh:/opt/awx/utils.sh
+      - ./inventory.ini:/opt/awx/installer/inventory
+      - ./config.yaml:/opt/awx/config.yaml
     command: ["/bin/bash", "-c", "chmod +x /entrypoint.sh && /entrypoint.sh"]
     security_opt:
       - no-new-privileges:true
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:8052/api/v2/ping/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     deploy:
       resources:
         limits:
@@ -48,21 +45,20 @@ services:
       - .env.awx
 
   awx_postgres:
-    image: postgres:14-alpine # Using alpine for smaller image
+    image: postgres:14-alpine # Using alpine for a smaller image
     container_name: awx_postgres
     restart: unless-stopped
     environment:
       - POSTGRES_DB=awx
       - POSTGRES_USER=awx
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?Database password not set}
-      - POSTGRES_HOST_AUTH_METHOD=scram-sha-256
+      - POSTGRES_HOST_AUTH_METHOD=trust  # Change to scram-sha-256 if needed
       - POSTGRES_MAX_CONNECTIONS=100
       - SHARED_BUFFERS=256MB
     networks:
       - awx_network
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - postgres_config:/etc/postgresql/postgresql.conf
     security_opt:
       - no-new-privileges:true
     healthcheck:
@@ -73,18 +69,26 @@ services:
     env_file:
       - .env.postgres
 
+  redis:
+    image: redis:6-alpine
+    container_name: awx_redis
+    restart: unless-stopped
+    networks:
+      - awx_network
+    volumes:
+      - redis_data:/data
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
 volumes:
   postgres_data:
     driver: local
-  postgres_config:
-    driver: local
-  awx_entrypoint:
-    driver: local
-  awx_utils:
-    driver: local
-  awx_inventory:
-    driver: local
-  awx_config:
+  redis_data:
     driver: local
 
 networks:
