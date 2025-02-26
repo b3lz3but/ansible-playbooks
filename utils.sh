@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -euo pipefail  # Add error handling and strict mode
+set -euo pipefail  # Enable strict mode
 
 # Constants
 readonly CONFIG_FILE="/opt/awx/config.yaml"
@@ -33,37 +33,56 @@ check_config_file() {
 # Load configuration with error handling
 load_config() {
     check_config_file
-    
+
     if ! python3 -c 'import yaml' 2>/dev/null; then
         log_error "Python YAML module not installed"
         exit 1
     fi
 
     local config_vars
-    config_vars=$(python3 -c 'import yaml,os; print("\n".join([f"{k.upper()}=\"{v}\"" for k,v in yaml.safe_load(open("'"$CONFIG_FILE"'")).get("awx",{}).items()]))') || {
+    config_vars=$(python3 -c '
+import yaml
+import os
+try:
+    with open("'"$CONFIG_FILE"'", "r") as f:
+        config = yaml.safe_load(f)
+        for key, value in config.get("awx", {}).items():
+            print(f"{key.upper()}=\"{value}\"")
+except Exception as e:
+    print(f"ERROR: {str(e)}")
+    exit(1)
+') || {
         log_error "Failed to parse config file"
         exit 1
     }
-    
+
     eval "$config_vars"
 }
 
 # Check for required dependencies with timeout
 check_dependencies() {
     check_config_file
-    
+
     local missing_deps=()
-    local TIMEOUT=300  # 5 minutes timeout for installation
-    
+    local TIMEOUT=300  # 5 minutes timeout
+
     while read -r dep; do
-        if ! command -v "$dep" &> /dev/null; then
+        if ! command -v "$dep" &>/dev/null; then
             missing_deps+=("$dep")
         fi
-    done < <(python3 -c 'import yaml; print("\n".join(yaml.safe_load(open("'"$CONFIG_FILE"'"))["dependencies"]["required"]))')
+    done < <(python3 -c '
+import yaml
+try:
+    with open("'"$CONFIG_FILE"'", "r") as f:
+        print("\n".join(yaml.safe_load(f)["dependencies"]["required"]))
+except Exception as e:
+    print(f"ERROR: {str(e)}")
+    exit(1)
+')
 
     if [ ${#missing_deps[@]} -ne 0 ]; then
         log_info "Installing missing dependencies: ${missing_deps[*]}"
-        timeout $TIMEOUT apt-get update && apt-get install -y "${missing_deps[@]}" || {
+        timeout "$TIMEOUT" apt-get update && apt-get install -y "${missing_deps[@]}" || {
             log_error "Failed to install dependencies"
             exit 1
         }
@@ -73,8 +92,8 @@ check_dependencies() {
 # Validate AWX connectivity with timeout
 check_awx_connection() {
     local TIMEOUT=10
-    
-    if timeout $TIMEOUT curl -sf --head "$AWX_URL" &>/dev/null; then
+
+    if timeout "$TIMEOUT" curl -sf --head "$AWX_URL" &>/dev/null; then
         log_success "AWX is available at $AWX_URL"
         return 0
     else
@@ -86,9 +105,17 @@ check_awx_connection() {
 # Get available playbooks with validation
 get_playbooks() {
     check_config_file
-    
+
     local playbooks_dir
-    playbooks_dir=$(python3 -c 'import yaml; print(yaml.safe_load(open("'"$CONFIG_FILE"'"))["paths"]["playbooks"])') || {
+    playbooks_dir=$(python3 -c '
+import yaml
+try:
+    with open("'"$CONFIG_FILE"'", "r") as f:
+        print(yaml.safe_load(f)["paths"]["playbooks"])
+except Exception as e:
+    print(f"ERROR: {str(e)}")
+    exit(1)
+') || {
         log_error "Failed to get playbooks directory"
         exit 1
     }
@@ -109,7 +136,7 @@ ensure_service_running() {
     local service_name="$1"
     local check_command="$2"
     local TIMEOUT=30
-    
+
     log_info "Checking if $service_name is running..."
 
     if ! eval "$check_command"; then
@@ -118,10 +145,10 @@ ensure_service_running() {
             log_error "Failed to restart $service_name"
             exit 1
         }
-        
+
         sleep 5
-        
-        timeout $TIMEOUT bash -c "until eval '$check_command'; do sleep 1; done" || {
+
+        timeout "$TIMEOUT" bash -c "until eval '$check_command'; do sleep 1; done" || {
             log_error "Failed to start $service_name"
             exit 1
         }
