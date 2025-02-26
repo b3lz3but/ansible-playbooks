@@ -110,6 +110,8 @@ WORKDIR $AWX_PATH/installer
 # Copy configuration files
 COPY --chown=${AWX_USER}:${AWX_GROUP} inventory.ini /opt/awx/installer/inventory
 COPY --chown=${AWX_USER}:${AWX_GROUP} entrypoint.sh /entrypoint.sh
+COPY --chown=${AWX_USER}:${AWX_GROUP} utils.sh /opt/awx/utils.sh
+COPY --chown=${AWX_USER}:${AWX_GROUP} logger.sh /opt/awx/logger.sh
 
 # Ensure scripts have execution permissions
 RUN chmod 0750 /entrypoint.sh 
