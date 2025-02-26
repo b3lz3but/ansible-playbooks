@@ -82,10 +82,22 @@ except Exception as e:
 
     if [ ${#missing_deps[@]} -ne 0 ]; then
         log_info "Installing missing dependencies: ${missing_deps[*]}"
-        timeout "$TIMEOUT" apt-get update && apt-get install -y "${missing_deps[@]}" || {
-            log_error "Failed to install dependencies"
-            exit 1
-        }
+        if [ "$(id -u)" -ne 0 ]; then
+            if command -v sudo >/dev/null; then
+                sudo apt-get update && sudo apt-get install -y "${missing_deps[@]}" || {
+                    log_error "Failed to install dependencies using sudo"
+                    exit 1
+                }
+            else
+                log_error "Not running as root and sudo is not available. Cannot install dependencies."
+                exit 1
+            fi
+        else
+            apt-get update && apt-get install -y "${missing_deps[@]}" || {
+                log_error "Failed to install dependencies"
+                exit 1
+            }
+        fi
     fi
 }
 
