@@ -1,3 +1,5 @@
+version: "3.9"  # Recommend using recent version
+
 services:
   awx:
     build:
@@ -20,21 +22,30 @@ services:
     networks:
       - awx_network
     volumes:
-      - type: bind
-        source: ./entrypoint.sh
+      - type: volume
+        source: awx_entrypoint
         target: /entrypoint.sh
-      - type: bind
-        source: ./utils.sh
+      - type: volume
+        source: awx_utils
         target: /opt/awx/utils.sh
-      - type: bind
-        source: ./inventory.ini
+      - type: volume
+        source: awx_inventory
         target: /opt/awx/installer/inventory
-      - type: bind
-        source: ./config.yaml
+      - type: volume
+        source: awx_config
         target: /opt/awx/config.yaml
     command: ["/bin/bash", "-c", "chmod +x /entrypoint.sh && /entrypoint.sh"]
     security_opt:
       - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+    env_file:
+      - .env.awx
 
   awx_postgres:
     image: postgres:14-alpine # Using alpine for smaller image
@@ -45,10 +56,13 @@ services:
       - POSTGRES_USER=awx
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?Database password not set}
       - POSTGRES_HOST_AUTH_METHOD=scram-sha-256
+      - POSTGRES_MAX_CONNECTIONS=100
+      - SHARED_BUFFERS=256MB
     networks:
       - awx_network
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - postgres_config:/etc/postgresql/postgresql.conf
     security_opt:
       - no-new-privileges:true
     healthcheck:
@@ -56,9 +70,21 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    env_file:
+      - .env.postgres
 
 volumes:
   postgres_data:
+    driver: local
+  postgres_config:
+    driver: local
+  awx_entrypoint:
+    driver: local
+  awx_utils:
+    driver: local
+  awx_inventory:
+    driver: local
+  awx_config:
     driver: local
 
 networks:
