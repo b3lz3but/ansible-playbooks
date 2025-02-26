@@ -55,3 +55,7 @@ services:
 volumes:
   postgres_data:
     driver: local
+
+networks:
+  awx_network:
+    driver: bridge
