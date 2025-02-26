@@ -96,6 +96,9 @@ RUN apt-get update && apt-get upgrade -y && \
     libxmlsec1-openssl \
     && rm -rf /var/lib/apt/lists/*
 
+# Install PyYAML (to avoid ModuleNotFoundError)
+RUN pip install --no-cache-dir pyyaml
+
 # Create dedicated user & group
 RUN groupadd -r ${AWX_GROUP} && \
     useradd -r -g ${AWX_GROUP} -d /home/${AWX_USER} -m -s /sbin/nologin ${AWX_USER}
