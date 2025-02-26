@@ -97,7 +97,7 @@ RUN apt-get update && apt-get upgrade -y && \
     && rm -rf /var/lib/apt/lists/*
 
 # Install PyYAML (to avoid ModuleNotFoundError)
-RUN pip install --no-cache-dir pyyaml
+RUN pip install --no-cache-dir pyyaml ansible
 
 # Create dedicated user & group
 RUN groupadd -r ${AWX_GROUP} && \
