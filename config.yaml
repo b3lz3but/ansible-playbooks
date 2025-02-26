@@ -77,11 +77,11 @@ dependencies:
     - zip
 display:
   colors:
-    success: '\033[0;32m'
-    error: '\033[0;31m'
-    warning: '\033[0;33m'
-    info: '\033[0;34m'
-    reset: '\033[0m'
-  formatting:
-    timestamp: true
-    debug_info: ${DEBUG_FORMAT:-false}
+    success: "\033[0;32m"
+    error: "\033[0;31m"
+    warning: "\033[0;33m"
+    info: "\033[0;34m"
+    reset: "\033[0m"
+paths:
+  logs: "/var/log"
+  config: "/opt/awx/config.yaml"
