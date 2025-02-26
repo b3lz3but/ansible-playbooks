@@ -37,7 +37,7 @@ load_config() {
     if ! python3 -c 'import yaml' 2>/dev/null; then
         log_error "Python YAML module not installed"
         exit 1
-    }
+    fi
 
     local config_vars
     config_vars=$(python3 -c 'import yaml,os; print("\n".join([f"{k.upper()}=\"{v}\"" for k,v in yaml.safe_load(open("'"$CONFIG_FILE"'")).get("awx",{}).items()]))') || {
@@ -96,7 +96,7 @@ get_playbooks() {
     if [ ! -d "$playbooks_dir" ]; then
         log_error "Playbooks directory not found: $playbooks_dir"
         exit 1
-    }
+    fi
 
     find "$playbooks_dir" -name "*.yml" -type f -exec basename {} \; || {
         log_error "Failed to list playbooks"
