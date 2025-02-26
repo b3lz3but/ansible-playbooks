@@ -3,67 +3,73 @@ app_config:
   environments:
     development:
       database:
-        host: localhost
+        host: "localhost"
         port: 5432
         max_connections: 100
         shared_buffers: "256MB"
         effective_cache_size: "1GB"
     production:
       database:
-        host: ${DB_HOST}
-        port: ${DB_PORT}
-        max_connections: ${DB_MAX_CONNECTIONS:-200}
-        shared_buffers: ${DB_SHARED_BUFFERS:-"1GB"}
-        effective_cache_size: ${DB_CACHE_SIZE:-"4GB"}
+        host: "${DB_HOST:-awx_postgres}"
+        port: "${DB_PORT:-5432}"
+        max_connections: "${DB_MAX_CONNECTIONS:-200}"
+        shared_buffers: "${DB_SHARED_BUFFERS:-1GB}"
+        effective_cache_size: "${DB_CACHE_SIZE:-4GB}"
   awx_settings:
-    url: ${AWX_URL:-"http://localhost:8052"}
-    user: ${AWX_ADMIN_USER:-"admin"}
-    password: ${AWX_ADMIN_PASSWORD} # Moved to environment variable
+    url: "${AWX_URL:-http://localhost:8052}"
+    user: "${AWX_ADMIN_USER:-admin}"
+    password: "${AWX_ADMIN_PASSWORD}" # Stored in environment variable
     api_version: "v2"
     defaults:
-      job_timeout: ${AWX_JOB_TIMEOUT:-3600}
-      max_failures: ${AWX_MAX_FAILURES:-3}
-      execution_nodes: ${AWX_EXECUTION_NODES:-["node1", "node2"]}
-      concurrent_jobs: ${AWX_CONCURRENT_JOBS:-10}
+      job_timeout: "${AWX_JOB_TIMEOUT:-3600}"
+      max_failures: "${AWX_MAX_FAILURES:-3}"
+      execution_nodes:
+        - "${AWX_EXECUTION_NODE1:-node1}"
+        - "${AWX_EXECUTION_NODE2:-node2}"
+      concurrent_jobs: "${AWX_CONCURRENT_JOBS:-10}"
   system:
     paths:
-      playbooks: ${PLAYBOOKS_PATH:-"/ansible/playbooks"}
-      inventory: ${INVENTORY_PATH:-"/ansible/inventory.ini"}
-      logs: ${LOGS_PATH:-"/var/log/ansible-runner"}
-      config: ${CONFIG_PATH:-"/etc/ansible/config.yaml"}
-      awx_data: ${AWX_DATA_PATH:-"/opt/awx/data"}
+      playbooks: "${PLAYBOOKS_PATH:-/ansible/playbooks}"
+      inventory: "${INVENTORY_PATH:-/ansible/inventory.ini}"
+      logs: "${LOGS_PATH:-/var/log/ansible-runner}"
+      config: "${CONFIG_PATH:-/etc/ansible/config.yaml}"
+      awx_data: "${AWX_DATA_PATH:-/opt/awx/data}"
     logging:
-      level: ${LOG_LEVEL:-"INFO"}
-      format: ${LOG_FORMAT:-"[%(asctime)s] [%(levelname)s] %(message)s"}
-      retention_days: ${LOG_RETENTION:-7}
+      level: "${LOG_LEVEL:-INFO}"
+      format: "${LOG_FORMAT:-[%(asctime)s] [%(levelname)s] %(message)s}"
+      retention_days: "${LOG_RETENTION:-7}"
       handlers:
         file:
           enabled: true
-          path: ${LOG_FILE_PATH:-"/var/log/awx.log"}
+          path: "${LOG_FILE_PATH:-/var/log/awx.log}"
         syslog:
-          enabled: ${SYSLOG_ENABLED:-false}
-          facility: ${SYSLOG_FACILITY:-"local0"}
+          enabled: "${SYSLOG_ENABLED:-false}"
+          facility: "${SYSLOG_FACILITY:-local0}"
     security:
-      enforce_ssl: ${ENFORCE_SSL:-true}
-      secure_cookies: ${SECURE_COOKIES:-true}
-      allowed_hosts: ${ALLOWED_HOSTS:-["localhost"]}
-      cors_origins: ${CORS_ORIGINS:-[]}
+      enforce_ssl: "${ENFORCE_SSL:-true}"
+      secure_cookies: "${SECURE_COOKIES:-true}"
+      allowed_hosts:
+        - "${ALLOWED_HOST1:-localhost}"
+        - "${ALLOWED_HOST2:-}"
+      cors_origins:
+        - "${CORS_ORIGIN1:-}"
+        - "${CORS_ORIGIN2:-}"
       rate_limit:
-        enabled: ${RATE_LIMIT_ENABLED:-true}
-        requests_per_minute: ${RATE_LIMIT_RPM:-60}
+        enabled: "${RATE_LIMIT_ENABLED:-true}"
+        requests_per_minute: "${RATE_LIMIT_RPM:-60}"
     network:
-      proxy_enabled: ${PROXY_ENABLED:-false}
-      proxy_url: ${PROXY_URL:-""}
-      proxy_port: ${PROXY_PORT:-""}
-      timeout: ${NETWORK_TIMEOUT:-30}
-      retries: ${NETWORK_RETRIES:-3}
+      proxy_enabled: "${PROXY_ENABLED:-false}"
+      proxy_url: "${PROXY_URL:-}"
+      proxy_port: "${PROXY_PORT:-}"
+      timeout: "${NETWORK_TIMEOUT:-30}"
+      retries: "${NETWORK_RETRIES:-3}"
 # Common configurations
 common:
   logging:
-    level: ${LOG_LEVEL:-info}
+    level: "${LOG_LEVEL:-info}"
 dependencies:
   required:
-    - ansible>=${ANSIBLE_VERSION:-"2.9"}
+    - "ansible>=${ANSIBLE_VERSION:-2.9}"
     - sshpass
     - dialog
     - whiptail
