@@ -2,19 +2,51 @@
 
 CONFIG_FILE="$(dirname "$0")/config.yaml"
 
-# Check if the configuration file exists before proceeding
+# Check if the configuration file exists
 if [ ! -f "$CONFIG_FILE" ]; then
     echo "❌ ERROR: Configuration file not found at $CONFIG_FILE"
+    echo "🔹 Hint: Ensure that 'config.yaml' exists in $(dirname "$0")"
     exit 1
 fi
 
-# Load colors from config
-eval $(python3 -c 'import yaml;print("\n".join([f"{k.upper()}=\"{v}\"" for k,v in yaml.safe_load(open("'"$CONFIG_FILE"'"))["display"]["colors"].items()]))')
+# Load colors from config safely
+COLORS=$(python3 -c "
+import yaml
+try:
+    with open('$CONFIG_FILE', 'r') as f:
+        config = yaml.safe_load(f)
+        colors = config.get('display', {}).get('colors', {})
+        print('\n'.join([f'{k.upper()}=\"{v}\"' for k, v in colors.items()]))
+except Exception as e:
+    print('ERROR: Failed to parse config.yaml:', e)
+    exit(1)
+")
 
-# Load log file path
-LOG_FILE=$(python3 -c 'import yaml;print(yaml.safe_load(open("'"$CONFIG_FILE"'"))["paths"]["logs"])/ansible-runner.log')
+# If there was an error parsing config.yaml, exit
+if echo "$COLORS" | grep -q "ERROR:"; then
+    exit 1
+fi
 
-# Create log directory if it doesn't exist
+eval "$COLORS"
+
+# Load log file path safely
+LOG_FILE=$(python3 -c "
+import yaml
+try:
+    with open('$CONFIG_FILE', 'r') as f:
+        config = yaml.safe_load(f)
+        print(config.get('paths', {}).get('logs', '') + '/ansible-runner.log')
+except Exception as e:
+    print('ERROR: Failed to retrieve log file path:', e)
+    exit(1)
+")
+
+# Ensure log file path is valid
+if [[ -z "$LOG_FILE" || "$LOG_FILE" == "ERROR:"* ]]; then
+    echo "❌ ERROR: Invalid log file path from config.yaml"
+    exit 1
+fi
+
 mkdir -p "$(dirname "$LOG_FILE")"
 
 log_message() {
