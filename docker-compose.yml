@@ -1,4 +1,4 @@
-version: "3.9"
+version: "3.8"
 services:
   awx:
     build:
@@ -24,27 +24,18 @@ services:
       - type: bind
         source: ./entrypoint.sh
         target: /entrypoint.sh
-        read_only: true
       - type: bind
         source: ./utils.sh
         target: /opt/awx/utils.sh
-        read_only: true
       - type: bind
         source: ./inventory.ini
         target: /opt/awx/installer/inventory
-        read_only: true
       - type: bind
         source: ./config.yaml
         target: /opt/awx/config.yaml
-        read_only: true
     command: ["/bin/bash", "-c", "chmod +x /entrypoint.sh && /entrypoint.sh"]
     security_opt:
       - no-new-privileges:true
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8052/"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
 
   awx_postgres:
     image: postgres:14-alpine # Using alpine for smaller image
@@ -57,20 +48,10 @@ services:
       - POSTGRES_HOST_AUTH_METHOD=scram-sha-256
     networks:
       - awx_network
-    healthcheck:
-      test: ["CMD", "pg_isready", "-U", "awx", "-d", "awx"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
     volumes:
       - postgres_data:/var/lib/postgresql/data
     security_opt:
       - no-new-privileges:true
-
-networks:
-  awx_network:
-    driver: bridge
-    internal: true # Prevent external network access
 
 volumes:
   postgres_data:
