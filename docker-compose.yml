@@ -1,5 +1,3 @@
-version: "3.9" # Recommended to use the latest Compose version
-
 services:
   awx:
     build:
