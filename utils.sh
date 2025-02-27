@@ -98,6 +98,47 @@ except Exception as e:
         fi
     fi
 }
+check_dependencies() {
+    check_config_file
+
+    local missing_deps=()
+    # Collect missing dependencies from the config's "dependencies.required" list
+    while read -r dep; do
+        # Remove version specification if present (e.g. "ansible>=${ANSIBLE_VERSION:-2.9}" becomes "ansible")
+        local dep_command="${dep%%>*}"
+        if ! command -v "$dep_command" &>/dev/null; then
+            missing_deps+=("$dep")
+        fi
+    done < <(python3 -c '
+import yaml
+try:
+    with open("'"$CONFIG_FILE"'", "r") as f:
+        print("\n".join(yaml.safe_load(f)["dependencies"]["required"]))
+except Exception as e:
+    print(f"ERROR: {str(e)}")
+    exit(1)
+')
+
+    if [ ${#missing_deps[@]} -gt 0 ]; then
+        if [ "$(id -u)" -eq 0 ]; then
+            log_info "Installing missing dependencies: ${missing_deps[*]}"
+            apt-get update && apt-get install -y "${missing_deps[@]}" || {
+                log_error "Failed to install dependencies"
+                exit 1
+            }
+        else
+            log_warning "Missing dependencies detected: ${missing_deps[*]}. Running as non-root, so automatic installation is skipped."
+            # Check each dependency again, but now only based on the command name
+            for dep in "${missing_deps[@]}"; do
+                local dep_command="${dep%%>*}"
+                if ! command -v "$dep_command" &>/dev/null; then
+                    log_error "Critical dependency '$dep_command' is missing. Please rebuild your image with all required packages pre-installed."
+                    exit 1
+                fi
+            done
+        fi
+    fi
+}
 
 
 # Validate AWX connectivity with timeout
