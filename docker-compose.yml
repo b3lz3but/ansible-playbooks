@@ -26,6 +26,8 @@ services:
       - ./utils.sh:/opt/awx/utils.sh
       - ./inventory.ini:/opt/awx/installer/inventory
       - ./config.yaml:/opt/awx/config.yaml
+      - ./playbooks:/ansible/playbooks
+
     # Override both entrypoint and command for troubleshooting:
     entrypoint: ["sleep", "infinity"]
     command: []
