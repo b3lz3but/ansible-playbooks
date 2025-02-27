@@ -15,7 +15,6 @@ app_config:
           max_connections: "${DB_MAX_CONNECTIONS:-200}"
           shared_buffers: "${DB_SHARED_BUFFERS:-1GB}"
           effective_cache_size: "${DB_CACHE_SIZE:-4GB}"
-
   awx_settings:
     url: "${AWX_URL:-http://localhost:8052}"
     user: "${AWX_ADMIN_USER:-admin}"
