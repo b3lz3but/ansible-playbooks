@@ -8,13 +8,14 @@ app_config:
         max_connections: 100
         shared_buffers: "256MB"
         effective_cache_size: "1GB"
-    production:
-      database:
-        host: "${DB_HOST:-awx_postgres}"
-        port: "${DB_PORT:-5432}"
-        max_connections: "${DB_MAX_CONNECTIONS:-200}"
-        shared_buffers: "${DB_SHARED_BUFFERS:-1GB}"
-        effective_cache_size: "${DB_CACHE_SIZE:-4GB}"
+      production:
+        database:
+          host: "${AWX_DB_HOST:-awx_postgres}"
+          port: "${AWX_DB_PORT:-5432}"
+          max_connections: "${DB_MAX_CONNECTIONS:-200}"
+          shared_buffers: "${DB_SHARED_BUFFERS:-1GB}"
+          effective_cache_size: "${DB_CACHE_SIZE:-4GB}"
+
   awx_settings:
     url: "${AWX_URL:-http://localhost:8052}"
     user: "${AWX_ADMIN_USER:-admin}"
