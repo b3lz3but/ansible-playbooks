@@ -82,6 +82,13 @@ RUN apt-get update && apt-get upgrade -y && \
     python3 \
     python3-pip \
     python3-venv \
+    sshpass \
+    dialog \
+    whiptail \
+    curl \
+    python3-yaml \
+    jq \
+    postgresql-client \
     libpq-dev \
     libssl-dev \
     libffi-dev \
