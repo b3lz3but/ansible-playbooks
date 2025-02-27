@@ -1,4 +1,4 @@
-version: "3.9"  # Recommended to use the latest Compose version
+version: "3.9" # Recommended to use the latest Compose version
 
 services:
   awx:
@@ -28,7 +28,8 @@ services:
       - ./utils.sh:/opt/awx/utils.sh
       - ./inventory.ini:/opt/awx/installer/inventory
       - ./config.yaml:/opt/awx/config.yaml
-    command: ["/bin/bash", "-c", "chmod +x /entrypoint.sh && /entrypoint.sh"]
+    # Override the command to keep the container running for troubleshooting:
+    command: ["sleep", "infinity"]
     security_opt:
       - no-new-privileges:true
     healthcheck:
@@ -39,20 +40,20 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '1'
+          cpus: "1"
           memory: 1G
     env_file:
       - .env.awx
 
   awx_postgres:
-    image: postgres:14-alpine # Using alpine for a smaller image
+    image: postgres:14-alpine
     container_name: awx_postgres
     restart: unless-stopped
     environment:
       - POSTGRES_DB=awx
       - POSTGRES_USER=awx
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?Database password not set}
-      - POSTGRES_HOST_AUTH_METHOD=trust  # Change to scram-sha-256 if needed
+      - POSTGRES_HOST_AUTH_METHOD=trust # Change to scram-sha-256 if needed
       - POSTGRES_MAX_CONNECTIONS=100
       - SHARED_BUFFERS=256MB
     networks:
