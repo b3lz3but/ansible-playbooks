@@ -101,12 +101,23 @@ except Exception as e:
 check_dependencies() {
     check_config_file
 
+    # Helper function to check for a dependency
+    check_command() {
+        local dep="$1"
+        if [[ "$dep" == "python3-yaml" ]]; then
+            python3 -c 'import yaml' &>/dev/null
+        elif [[ "$dep" == "postgresql-client" ]]; then
+            command -v psql &>/dev/null
+        else
+            command -v "$dep" &>/dev/null
+        fi
+    }
+
     local missing_deps=()
-    # Collect missing dependencies from the config's "dependencies.required" list
     while read -r dep; do
-        # Remove version specification if present (e.g. "ansible>=${ANSIBLE_VERSION:-2.9}" becomes "ansible")
+        # Strip any version requirement (e.g. "ansible>=${ANSIBLE_VERSION:-2.9}" becomes "ansible")
         local dep_command="${dep%%>*}"
-        if ! command -v "$dep_command" &>/dev/null; then
+        if ! check_command "$dep_command"; then
             missing_deps+=("$dep")
         fi
     done < <(python3 -c '
@@ -128,10 +139,9 @@ except Exception as e:
             }
         else
             log_warning "Missing dependencies detected: ${missing_deps[*]}. Running as non-root, so automatic installation is skipped."
-            # Check each dependency again, but now only based on the command name
             for dep in "${missing_deps[@]}"; do
                 local dep_command="${dep%%>*}"
-                if ! command -v "$dep_command" &>/dev/null; then
+                if ! check_command "$dep_command"; then
                     log_error "Critical dependency '$dep_command' is missing. Please rebuild your image with all required packages pre-installed."
                     exit 1
                 fi
