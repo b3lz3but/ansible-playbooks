@@ -28,8 +28,9 @@ services:
       - ./utils.sh:/opt/awx/utils.sh
       - ./inventory.ini:/opt/awx/installer/inventory
       - ./config.yaml:/opt/awx/config.yaml
-    # Override the command to keep the container running for troubleshooting:
-    command: ["sleep", "infinity"]
+    # Override both entrypoint and command for troubleshooting:
+    entrypoint: ["sleep", "infinity"]
+    command: []
     security_opt:
       - no-new-privileges:true
     healthcheck:
