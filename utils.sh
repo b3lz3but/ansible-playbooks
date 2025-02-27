@@ -64,8 +64,7 @@ check_dependencies() {
     check_config_file
 
     local missing_deps=()
-    local TIMEOUT=300  # 5 minutes timeout
-
+    # Collect missing dependencies from the config's "dependencies.required" list
     while read -r dep; do
         if ! command -v "$dep" &>/dev/null; then
             missing_deps+=("$dep")
@@ -80,26 +79,26 @@ except Exception as e:
     exit(1)
 ')
 
-    if [ ${#missing_deps[@]} -ne 0 ]; then
-        log_info "Installing missing dependencies: ${missing_deps[*]}"
-        if [ "$(id -u)" -ne 0 ]; then
-            if command -v sudo >/dev/null; then
-                sudo apt-get update && sudo apt-get install -y "${missing_deps[@]}" || {
-                    log_error "Failed to install dependencies using sudo"
-                    exit 1
-                }
-            else
-                log_error "Not running as root and sudo is not available. Cannot install dependencies."
-                exit 1
-            fi
-        else
+    if [ ${#missing_deps[@]} -gt 0 ]; then
+        if [ "$(id -u)" -eq 0 ]; then
+            log_info "Installing missing dependencies: ${missing_deps[*]}"
             apt-get update && apt-get install -y "${missing_deps[@]}" || {
                 log_error "Failed to install dependencies"
                 exit 1
             }
+        else
+            log_warning "Missing dependencies detected: ${missing_deps[*]}. Running as non-root, so automatic installation is skipped."
+            # Check again that each missing command is now available, and exit if any are critical.
+            for dep in "${missing_deps[@]}"; do
+                if ! command -v "$dep" &>/dev/null; then
+                    log_error "Critical dependency '$dep' is missing. Please rebuild your image with all required packages pre-installed."
+                    exit 1
+                fi
+            done
         fi
     fi
 }
+
 
 # Validate AWX connectivity with timeout
 check_awx_connection() {
