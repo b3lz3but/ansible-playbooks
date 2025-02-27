@@ -33,11 +33,11 @@ services:
     command: []
     security_opt:
       - no-new-privileges:true
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://127.0.0.1:8052/api/v2/ping/"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+    # healthcheck:
+    #   test: ["CMD", "curl", "-f", "http://127.0.0.1:8052/api/v2/ping/"]
+    #   interval: 10s
+    #   timeout: 5s
+    #   retries: 5
     deploy:
       resources:
         limits:
