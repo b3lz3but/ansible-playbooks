@@ -59,45 +59,7 @@ except Exception as e:
     eval "$config_vars"
 }
 
-# Check for required dependencies with timeout
-check_dependencies() {
-    check_config_file
-
-    local missing_deps=()
-    # Collect missing dependencies from the config's "dependencies.required" list
-    while read -r dep; do
-        if ! command -v "$dep" &>/dev/null; then
-            missing_deps+=("$dep")
-        fi
-    done < <(python3 -c '
-import yaml
-try:
-    with open("'"$CONFIG_FILE"'", "r") as f:
-        print("\n".join(yaml.safe_load(f)["dependencies"]["required"]))
-except Exception as e:
-    print(f"ERROR: {str(e)}")
-    exit(1)
-')
-
-    if [ ${#missing_deps[@]} -gt 0 ]; then
-        if [ "$(id -u)" -eq 0 ]; then
-            log_info "Installing missing dependencies: ${missing_deps[*]}"
-            apt-get update && apt-get install -y "${missing_deps[@]}" || {
-                log_error "Failed to install dependencies"
-                exit 1
-            }
-        else
-            log_warning "Missing dependencies detected: ${missing_deps[*]}. Running as non-root, so automatic installation is skipped."
-            # Check again that each missing command is now available, and exit if any are critical.
-            for dep in "${missing_deps[@]}"; do
-                if ! command -v "$dep" &>/dev/null; then
-                    log_error "Critical dependency '$dep' is missing. Please rebuild your image with all required packages pre-installed."
-                    exit 1
-                fi
-            done
-        fi
-    fi
-}
+# Consolidated check_dependencies function
 check_dependencies() {
     check_config_file
 
@@ -115,10 +77,10 @@ check_dependencies() {
 
     local missing_deps=()
     while read -r dep; do
-        # Strip any version requirement (e.g. "ansible>=${ANSIBLE_VERSION:-2.9}" becomes "ansible")
+        # Remove any version specifiers (e.g., "ansible>=2.9" becomes "ansible")
         local dep_command="${dep%%>*}"
         if ! check_command "$dep_command"; then
-            missing_deps+=("$dep")
+            missing_deps+=("$dep_command")
         fi
     done < <(python3 -c '
 import yaml
@@ -140,16 +102,14 @@ except Exception as e:
         else
             log_warning "Missing dependencies detected: ${missing_deps[*]}. Running as non-root, so automatic installation is skipped."
             for dep in "${missing_deps[@]}"; do
-                local dep_command="${dep%%>*}"
-                if ! check_command "$dep_command"; then
-                    log_error "Critical dependency '$dep_command' is missing. Please rebuild your image with all required packages pre-installed."
+                if ! check_command "$dep"; then
+                    log_error "Critical dependency '$dep' is missing. Please rebuild your image with all required packages pre-installed."
                     exit 1
                 fi
             done
         fi
     fi
 }
-
 
 # Validate AWX connectivity with timeout
 check_awx_connection() {
@@ -191,38 +151,4 @@ except Exception as e:
         log_error "Failed to list playbooks"
         exit 1
     }
-}
-
-# Service check functions with timeout
-ensure_service_running() {
-    local service_name="$1"
-    local check_command="$2"
-    local TIMEOUT=30
-
-    log_info "Checking if $service_name is running..."
-
-    if ! eval "$check_command"; then
-        log_warning "$service_name is not running! Attempting to start..."
-        systemctl restart "$service_name" || {
-            log_error "Failed to restart $service_name"
-            exit 1
-        }
-
-        sleep 5
-
-        timeout "$TIMEOUT" bash -c "until eval '$check_command'; do sleep 1; done" || {
-            log_error "Failed to start $service_name"
-            exit 1
-        }
-    fi
-    log_success "$service_name is running"
-}
-
-# Updated service check functions
-ensure_awx_running() {
-    ensure_service_running "awx" "pgrep -f 'awx-manage' > /dev/null"
-}
-
-ensure_postgres_running() {
-    ensure_service_running "postgresql" "pg_isready -h \"$AWX_DB_HOST\" -U \"$AWX_DB_USER\" > /dev/null 2>&1"
 }

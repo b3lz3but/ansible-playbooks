@@ -3,7 +3,8 @@
 # Enable strict mode for safety
 set -euo pipefail
 IFS=$'\n\t'
-set -x  # Debugging - print each command before executing
+# Debug mode is disabled for production
+# set -x
 
 # Constants with improved organization
 declare -r MAX_RETRIES=30
@@ -25,7 +26,7 @@ print_status() {
         "INFO")  echo -e "\n[\033[0;32m${timestamp}\033[0m] 📢 ${message}" ;;
         "WARN")  echo -e "\n[\033[0;33m${timestamp}\033[0m] ⚠️ ${message}" ;;
         "ERROR") echo -e "\n[\033[0;31m${timestamp}\033[0m] ❌ ${message}" ;;
-        *)       echo -e "\n[${timestamp}] ${message}" ;;
+         *)      echo -e "\n[${timestamp}] ${message}" ;;
     esac
 }
 
@@ -80,14 +81,14 @@ wait_for_postgres() {
     print_status "INFO" "✅ PostgreSQL is available"
 }
 
-# Function to wait for AWX services
+# Function to wait for AWX services (using the same endpoint as defined in docker-compose)
 wait_for_awx() {
     local timeout=300  # 5 minutes timeout
     local start_time
     start_time=$(date +%s)
 
     while true; do
-        if curl -fsSL "http://localhost:${AWX_PORT}/health" >/dev/null 2>&1; then
+        if curl -fsSL "http://127.0.0.1:${AWX_PORT}/api/v2/ping/" >/dev/null 2>&1; then
             print_status "INFO" "✅ AWX is up and running!"
             return 0
         fi
@@ -118,7 +119,6 @@ main() {
     # Load utility scripts
     for script in "$AWX_UTILS" "$AWX_LOGGER"; do
         if [[ -f "$script" ]]; then
-            # shellcheck source=/dev/null
             source "$script"
         else
             print_status "ERROR" "Required script $script not found!"
@@ -130,7 +130,7 @@ main() {
     check_dependencies
     wait_for_postgres
 
-    # Verify AWX installer directory
+    # Verify AWX installer directory, if required
     if [[ ! -d "$AWX_INSTALLER_DIR" ]]; then
         print_status "ERROR" "AWX installer directory not found!"
         exit 1

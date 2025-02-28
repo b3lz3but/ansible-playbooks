@@ -2,6 +2,7 @@
   hosts: localhost
   become: yes
   vars:
+    project_dir: "/path/to/your/project" # Adjust this path to your actual project directory
     awx_version: "24.6.0"
     awx_admin_user: "{{ lookup('env', 'AWX_ADMIN_USER') | default('admin') }}"
     awx_admin_password: "{{ lookup('env', 'AWX_ADMIN_PASSWORD') | default('password') }}"
@@ -19,7 +20,7 @@
         update_cache: yes
     - name: Ensure Docker Compose is installed
       get_url:
-        url: https://github.com/docker/compose/releases/download/1.29.2/docker-compose-`uname -s`-`uname -m`
+        url: "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-{{ ansible_system | lower }}-{{ ansible_architecture }}"
         dest: /usr/local/bin/docker-compose
         mode: '0755'
     - name: Start Docker service
@@ -29,20 +30,20 @@
         enabled: yes
     - name: Create .env file for AWX
       copy:
-        dest: /path/to/your/project/.env.awx
+        dest: "{{ project_dir }}/.env.awx"
         content: |
           AWX_ADMIN_USER={{ awx_admin_user }}
           AWX_ADMIN_PASSWORD={{ awx_admin_password }}
           AWX_DB_PASSWORD={{ awx_db_password }}
     - name: Create .env file for PostgreSQL
       copy:
-        dest: /path/to/your/project/.env.postgres
+        dest: "{{ project_dir }}/.env.postgres"
         content: |
           POSTGRES_PASSWORD={{ postgres_password }}
     - name: Pull and start AWX containers
       command: docker-compose up -d
       args:
-        chdir: /path/to/your/project
+        chdir: "{{ project_dir }}"
     - name: Wait for AWX to be ready
       uri:
         url: http://127.0.0.1:8052/api/v2/ping/
