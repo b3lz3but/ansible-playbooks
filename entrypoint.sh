@@ -15,6 +15,7 @@ declare -r AWX_PORT=8052
 declare -r AWX_INSTALLER_DIR="/opt/awx/installer"
 declare -r AWX_UTILS="/opt/awx/utils.sh"
 declare -r AWX_LOGGER="/opt/awx/logger.sh"
+declare -r INSTALL_MARKER=".installed"  # Marker file to indicate installation success
 
 # Function to print status messages with timestamp and color
 print_status() {
@@ -26,7 +27,7 @@ print_status() {
         "INFO")  echo -e "\n[\033[0;32m${timestamp}\033[0m] 📢 ${message}" ;;
         "WARN")  echo -e "\n[\033[0;33m${timestamp}\033[0m] ⚠️ ${message}" ;;
         "ERROR") echo -e "\n[\033[0;31m${timestamp}\033[0m] ❌ ${message}" ;;
-         *)      echo -e "\n[${timestamp}] ${message}" ;;
+              *) echo -e "\n[${timestamp}] ${message}" ;;
     esac
 }
 
@@ -65,7 +66,7 @@ check_dependencies() {
     print_status "INFO" "All dependencies are satisfied"
 }
 
-# Function to wait for PostgreSQL
+# Function to wait for PostgreSQL connectivity
 wait_for_postgres() {
     local counter=0
     print_status "INFO" "🔍 Checking PostgreSQL connectivity..."
@@ -143,10 +144,16 @@ main() {
         exit 1
     fi
 
-    print_status "INFO" "📦 Running AWX installation playbook"
-    if ! ansible-playbook -vvv -i inventory install.yml; then
-        print_status "ERROR" "AWX installation failed! Check logs for details."
-        exit 1
+    # Run installation only if it hasn't been done before
+    if [[ ! -f "$INSTALL_MARKER" ]]; then
+        print_status "INFO" "📦 Running AWX installation playbook"
+        if ! ansible-playbook -vvv -i inventory install.yml; then
+            print_status "ERROR" "AWX installation failed! Check logs for details."
+            exit 1
+        fi
+        touch "$INSTALL_MARKER"
+    else
+        print_status "INFO" "AWX already installed, skipping installation playbook"
     fi
 
     wait_for_awx
