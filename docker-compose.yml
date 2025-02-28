@@ -24,7 +24,7 @@ services:
     volumes:
       - ./entrypoint.sh:/entrypoint.sh
       - ./utils.sh:/opt/awx/utils.sh
-      - ./inventory.ini:/opt/awx/installer/inventory
+      # - ./inventory.ini:/opt/awx/installer/inventory
       - ./config.yaml:/opt/awx/config.yaml
       - ./playbooks:/ansible/playbooks
       # Removed troubleshooting overrides:
