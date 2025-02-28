@@ -27,9 +27,9 @@ services:
       - ./inventory.ini:/opt/awx/installer/inventory
       - ./config.yaml:/opt/awx/config.yaml
       - ./playbooks:/ansible/playbooks
-    # Removed troubleshooting overrides:
-    # entrypoint: ["sleep", "infinity"]
-    # command: []
+      # Removed troubleshooting overrides:
+    entrypoint: ["sleep", "infinity"]
+    command: []
     security_opt:
       - no-new-privileges:true
     healthcheck:

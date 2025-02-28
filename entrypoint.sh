@@ -144,7 +144,7 @@ main() {
     fi
 
     print_status "INFO" "📦 Running AWX installation playbook"
-    if ! ansible-playbook -i inventory install.yml; then
+    if ! ansible-playbook -vvv -i inventory install.yml; then
         print_status "ERROR" "AWX installation failed! Check logs for details."
         exit 1
     fi
