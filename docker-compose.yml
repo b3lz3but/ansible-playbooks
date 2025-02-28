@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   awx:
     build:
@@ -13,7 +11,7 @@ services:
       - AWX_DB_PORT=5432
       - AWX_DB_NAME=awx
       - AWX_DB_USER=awx
-      - AWX_DB_PASSWORD=${DB_PASSWORD:?Database password not set}
+      - AWX_DB_PASSWORD=${DB_PASSWORD:-password} # Default to "password" if DB_PASSWORD not set
       - AWX_ADMIN_USER=${AWX_ADMIN_USER:-admin}
       - AWX_ADMIN_PASSWORD=${AWX_ADMIN_PASSWORD:-password}
       - PLAYBOOKS_PATH=/ansible/playbooks
@@ -29,7 +27,7 @@ services:
       - ./utils.sh:/opt/awx/utils.sh
       - ./config.yaml:/opt/awx/config.yaml
       - ./playbooks:/ansible/playbooks
-      # Removed installer volume mount to avoid conflicts
+      # Installer volume mount removed to avoid conflicts
     security_opt:
       - no-new-privileges:true
     healthcheck:
@@ -52,7 +50,7 @@ services:
     environment:
       - POSTGRES_DB=awx
       - POSTGRES_USER=awx
-      - POSTGRES_PASSWORD=${DB_PASSWORD:?Database password not set}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-password} # Same default used here
       - POSTGRES_HOST_AUTH_METHOD=trust
       - POSTGRES_MAX_CONNECTIONS=100
       - SHARED_BUFFERS=256MB
