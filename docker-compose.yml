@@ -1,3 +1,5 @@
+version: "3.8"
+
 services:
   awx:
     build:
@@ -11,7 +13,7 @@ services:
       - AWX_DB_PORT=5432
       - AWX_DB_NAME=awx
       - AWX_DB_USER=awx
-      - AWX_DB_PASSWORD=${DB_PASSWORD:-password} # Default to "password" if DB_PASSWORD not set
+      - AWX_DB_PASSWORD=${DB_PASSWORD:-password}
       - AWX_ADMIN_USER=${AWX_ADMIN_USER:-admin}
       - AWX_ADMIN_PASSWORD=${AWX_ADMIN_PASSWORD:-password}
       - PLAYBOOKS_PATH=/ansible/playbooks
@@ -19,7 +21,7 @@ services:
       awx_postgres:
         condition: service_healthy
     ports:
-      - "127.0.0.1:8052:8052" # Restricted to localhost
+      - "127.0.0.1:8052:8052"
     networks:
       - awx_network
     volumes:
@@ -27,7 +29,7 @@ services:
       - ./utils.sh:/opt/awx/utils.sh
       - ./config.yaml:/opt/awx/config.yaml
       - ./playbooks:/ansible/playbooks
-      # Installer volume mount removed to avoid conflicts
+      - awx_data:/opt/awx/data
     security_opt:
       - no-new-privileges:true
     healthcheck:
@@ -50,7 +52,7 @@ services:
     environment:
       - POSTGRES_DB=awx
       - POSTGRES_USER=awx
-      - POSTGRES_PASSWORD=${DB_PASSWORD:-password} # Same default used here
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-password}
       - POSTGRES_HOST_AUTH_METHOD=trust
       - POSTGRES_MAX_CONNECTIONS=100
       - SHARED_BUFFERS=256MB
@@ -88,6 +90,8 @@ volumes:
   postgres_data:
     driver: local
   redis_data:
+    driver: local
+  awx_data:
     driver: local
 
 networks:
