@@ -147,4 +147,28 @@ main() {
     # Run installation only if it hasn't been done before
     if [[ ! -f "$INSTALL_MARKER" ]]; then
         print_status "INFO" "📦 Running AWX installation playbook"
-        if ! ansible-play
+        if ! ansible-playbook -vvv -i inventory install.yml; then
+            print_status "ERROR" "AWX installation failed! Check logs for details."
+            exit 1
+        fi
+        touch "$INSTALL_MARKER"
+    else
+        print_status "INFO" "AWX already installed, skipping installation playbook"
+    fi
+
+    wait_for_awx
+
+    local ip_address
+    ip_address=$(hostname -I | awk '{print $1}')
+
+    print_status "INFO" "✅ AWX installation completed successfully!"
+    print_status "INFO" "🌍 AWX is available at: http://${ip_address}:${AWX_PORT}"
+    print_status "INFO" "👉 Default credentials: admin / password"
+    print_status "INFO" "📝 Please change the default password after first login"
+
+    # Keep container running
+    sleep infinity & wait
+}
+
+# Execute main function
+main "$@"
