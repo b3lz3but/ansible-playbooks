@@ -14,7 +14,7 @@ fi
 # Load colors from config and remove any null bytes from the values
 eval $(python3 -c 'import yaml; 
 colors = yaml.safe_load(open("'"$CONFIG_FILE"'")).get("display", {}).get("colors", {}); 
-print("\n".join([f"{k.upper()}=\"{v.replace(chr(0), "")}\"" for k, v in colors.items()]))')
+print("\n".join([f"{k.upper()}=\'{v.replace(chr(0), "")}\'" for k, v in colors.items()]))')
 
 # Load log file path from config.yaml (using the "paths" block at the bottom)
 LOG_FILE=$(python3 -c 'import yaml; print(yaml.safe_load(open("'"$CONFIG_FILE"'")).get("paths", {}).get("logs", "/var/log") + "/ansible-runner.log")')
