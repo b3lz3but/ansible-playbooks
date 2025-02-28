@@ -10,7 +10,7 @@ IFS=$'\n\t'
 declare -r MAX_RETRIES=30
 declare -r WAIT_SECONDS=5
 declare -ra REQUIRED_PACKAGES=("postgresql-client" "ansible" "curl")
-declare -ra REQUIRED_ENV_VARS=("AWX_DB_HOST" "AWX_DB_USER" "AWX_DB_PASSWORD" "AWX_DB_NAME")
+declare -ra REQUIRED_ENV_VARS=("AWX_DB_HOST" "AWX_DB_PORT" "AWX_DB_USER" "AWX_DB_PASSWORD" "AWX_DB_NAME")
 declare -r AWX_PORT=8052
 declare -r AWX_INSTALLER_DIR="/opt/awx/installer"
 declare -r AWX_UTILS="/opt/awx/utils.sh"
@@ -69,7 +69,7 @@ check_dependencies() {
 wait_for_postgres() {
     local counter=0
     print_status "INFO" "🔍 Checking PostgreSQL connectivity..."
-    while ! PGPASSWORD="${AWX_DB_PASSWORD}" psql -h "${AWX_DB_HOST}" -U "${AWX_DB_USER}" -d "${AWX_DB_NAME}" -c '\l' >/dev/null 2>&1; do
+    while ! PGPASSWORD="${AWX_DB_PASSWORD}" psql -h "${AWX_DB_HOST}" -p "${AWX_DB_PORT}" -U "${AWX_DB_USER}" -d "${AWX_DB_NAME}" -c '\l' >/dev/null 2>&1; do
         ((counter++))
         if [[ "$counter" -ge "$MAX_RETRIES" ]]; then
             print_status "ERROR" "PostgreSQL is not available after $MAX_RETRIES attempts"
@@ -130,7 +130,7 @@ main() {
     check_dependencies
     wait_for_postgres
 
-    # Verify AWX installer directory, if required
+    # Verify AWX installer directory exists
     if [[ ! -d "$AWX_INSTALLER_DIR" ]]; then
         print_status "ERROR" "AWX installer directory not found!"
         exit 1
