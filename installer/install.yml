@@ -1,0 +1,57 @@
+- name: Install and configure AWX
+  hosts: localhost
+  become: yes
+  vars:
+    awx_version: "24.6.0"
+    awx_admin_user: "{{ lookup('env', 'AWX_ADMIN_USER') | default('admin') }}"
+    awx_admin_password: "{{ lookup('env', 'AWX_ADMIN_PASSWORD') | default('password') }}"
+    awx_db_host: "awx_postgres"
+    awx_db_port: "5432"
+    awx_db_name: "awx"
+    awx_db_user: "awx"
+    awx_db_password: "{{ lookup('env', 'AWX_DB_PASSWORD') }}"
+    postgres_password: "{{ lookup('env', 'POSTGRES_PASSWORD') }}"
+  tasks:
+    - name: Ensure Docker is installed
+      apt:
+        name: docker.io
+        state: present
+        update_cache: yes
+    - name: Ensure Docker Compose is installed
+      get_url:
+        url: https://github.com/docker/compose/releases/download/1.29.2/docker-compose-`uname -s`-`uname -m`
+        dest: /usr/local/bin/docker-compose
+        mode: '0755'
+    - name: Start Docker service
+      service:
+        name: docker
+        state: started
+        enabled: yes
+    - name: Create .env file for AWX
+      copy:
+        dest: /path/to/your/project/.env.awx
+        content: |
+          AWX_ADMIN_USER={{ awx_admin_user }}
+          AWX_ADMIN_PASSWORD={{ awx_admin_password }}
+          AWX_DB_PASSWORD={{ awx_db_password }}
+    - name: Create .env file for PostgreSQL
+      copy:
+        dest: /path/to/your/project/.env.postgres
+        content: |
+          POSTGRES_PASSWORD={{ postgres_password }}
+    - name: Pull and start AWX containers
+      command: docker-compose up -d
+      args:
+        chdir: /path/to/your/project
+    - name: Wait for AWX to be ready
+      uri:
+        url: http://127.0.0.1:8052/api/v2/ping/
+        method: GET
+        status_code: 200
+      register: result
+      until: result.status == 200
+      retries: 30
+      delay: 10
+    - name: Display AWX admin credentials
+      debug:
+        msg: "AWX is ready. Admin user: {{ awx_admin_user }}, Admin password: {{ awx_admin_password }}"
