@@ -1,12 +1,10 @@
 #!/usr/bin/env bash
 
-# Enable strict mode for safety
 set -euo pipefail
 IFS=$'\n\t'
-# Debug mode is disabled for production
-# set -x
+set +x
 
-# Constants with improved organization
+# Increase retries if needed
 declare -r MAX_RETRIES=60
 declare -r WAIT_SECONDS=5
 declare -ra REQUIRED_PACKAGES=("postgresql-client" "ansible" "curl")
@@ -15,9 +13,8 @@ declare -r AWX_PORT=8052
 declare -r AWX_INSTALLER_DIR="/opt/awx/installer"
 declare -r AWX_UTILS="/opt/awx/utils.sh"
 declare -r AWX_LOGGER="/opt/awx/logger.sh"
-declare -r INSTALL_MARKER="/opt/awx/data/.installed"  # Persistent installation marker
+declare -r INSTALL_MARKER="/opt/awx/data/.installed"
 
-# Function to print status messages with timestamp and color
 print_status() {
     local level=$1
     local message=$2
@@ -31,7 +28,6 @@ print_status() {
     esac
 }
 
-# Function to check required environment variables
 check_env_vars() {
     local missing_vars=()
     for var in "${REQUIRED_ENV_VARS[@]}"; do
@@ -47,7 +43,6 @@ check_env_vars() {
     print_status "INFO" "Environment validation successful"
 }
 
-# Function to check and install required packages
 check_dependencies() {
     local missing_packages=()
     for cmd in "${REQUIRED_PACKAGES[@]}"; do
@@ -66,7 +61,6 @@ check_dependencies() {
     print_status "INFO" "All dependencies are satisfied"
 }
 
-# Function to wait for PostgreSQL connectivity
 wait_for_postgres() {
     local counter=0
     print_status "INFO" "🔍 Checking PostgreSQL connectivity..."
@@ -82,9 +76,8 @@ wait_for_postgres() {
     print_status "INFO" "✅ PostgreSQL is available"
 }
 
-# Function to wait for AWX services (using the same endpoint as defined in docker-compose)
 wait_for_awx() {
-    local timeout=300  # 5 minutes timeout
+    local timeout=300
     local start_time
     start_time=$(date +%s)
 
@@ -104,9 +97,7 @@ wait_for_awx() {
     done
 }
 
-# Main execution
 main() {
-    # Cleanup function to handle shutdown signals
     cleanup() {
         print_status "INFO" "🔄 Shutting down gracefully..."
         kill "$(jobs -p)" 2>/dev/null || true
@@ -117,7 +108,6 @@ main() {
 
     print_status "INFO" "🚀 Starting AWX installation process"
 
-    # Load utility scripts
     for script in "$AWX_UTILS" "$AWX_LOGGER"; do
         if [[ -f "$script" ]]; then
             source "$script"
@@ -131,7 +121,6 @@ main() {
     check_dependencies
     wait_for_postgres
 
-    # Verify AWX installer directory exists
     if [[ ! -d "$AWX_INSTALLER_DIR" ]]; then
         print_status "ERROR" "AWX installer directory not found!"
         exit 1
@@ -144,7 +133,6 @@ main() {
         exit 1
     fi
 
-    # Run installation only if it hasn't been done before
     if [[ ! -f "$INSTALL_MARKER" ]]; then
         print_status "INFO" "📦 Running AWX installation playbook"
         if ! ansible-playbook -vvv -i inventory install.yml; then
@@ -166,9 +154,7 @@ main() {
     print_status "INFO" "👉 Default credentials: admin / password"
     print_status "INFO" "📝 Please change the default password after first login"
 
-    # Keep container running
     sleep infinity & wait
 }
 
-# Execute main function
 main "$@"

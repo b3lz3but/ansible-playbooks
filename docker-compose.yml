@@ -43,6 +43,7 @@ services:
           memory: 1G
     env_file:
       - .env.awx
+    # Prepend a command to fix /var/log permissions before starting the entrypoint
     command: /bin/bash -c "chmod o+w /var/log && /entrypoint.sh"
 
   awx_postgres:
