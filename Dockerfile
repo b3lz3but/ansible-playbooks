@@ -48,8 +48,13 @@ ARG AWX_VERSION=24.6.0
 ARG AWX_PATH=/opt/awx
 
 # Download and extract AWX tarball
-RUN curl -L https://github.com/ansible/awx/archive/${AWX_VERSION}.tar.gz | tar -xz -C /opt && \
-    mv /opt/awx-${AWX_VERSION} ${AWX_PATH}
+# Copy the local archive into the image
+COPY awx-24.6.0.tar.gz /tmp/awx-24.6.0.tar.gz
+
+# Extract and clean up
+RUN tar -xz -f /tmp/awx-24.6.0.tar.gz -C /opt && \
+    mv /opt/awx-24.6.0 /opt/awx && \
+    rm /tmp/awx-24.6.0.tar.gz
 
 # Ensure requirements file exists
 RUN test -f "$AWX_PATH/requirements/requirements.txt" || (echo "ERROR: requirements.txt missing" && exit 1)
