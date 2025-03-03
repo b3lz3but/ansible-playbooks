@@ -47,6 +47,9 @@ RUN git clone -b ${AWX_VERSION} --depth 1 https://github.com/ansible/awx.git $AW
 # Ensure requirements file exists
 RUN test -f "$AWX_PATH/requirements/requirements.txt" || (echo "ERROR: requirements.txt missing" && exit 1)
 
+# Ensure the AWX data directory exists and mark installation as complete
+RUN mkdir -p /opt/awx/data && touch /opt/awx/data/.installed
+
 # Install Python dependencies
 RUN . $VENV_PATH/bin/activate && \
     pip install --no-cache-dir -r $AWX_PATH/requirements/requirements.txt && \
