@@ -7,7 +7,7 @@ IFS=$'\n\t'
 # set -x
 
 # Constants with improved organization
-declare -r MAX_RETRIES=30
+declare -r MAX_RETRIES=60
 declare -r WAIT_SECONDS=5
 declare -ra REQUIRED_PACKAGES=("postgresql-client" "ansible" "curl")
 declare -ra REQUIRED_ENV_VARS=("AWX_DB_HOST" "AWX_DB_PORT" "AWX_DB_USER" "AWX_DB_PASSWORD" "AWX_DB_NAME")
