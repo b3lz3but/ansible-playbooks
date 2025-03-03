@@ -42,7 +42,13 @@ RUN python3 -m venv $VENV_PATH && \
     pip install --upgrade pip wheel setuptools
 
 # Clone AWX repository (specific version)
-RUN git clone -b ${AWX_VERSION} https://github.com/ansible/awx.git $AWX_PATH
+# Define AWX version and path
+ARG AWX_VERSION=24.6.0
+ARG AWX_PATH=/opt/awx
+
+# Download and extract AWX tarball
+RUN curl -L https://github.com/ansible/awx/archive/${AWX_VERSION}.tar.gz | tar -xz -C /opt && \
+    mv /opt/awx-${AWX_VERSION} ${AWX_PATH}
 
 # Ensure requirements file exists
 RUN test -f "$AWX_PATH/requirements/requirements.txt" || (echo "ERROR: requirements.txt missing" && exit 1)
