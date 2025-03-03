@@ -16,7 +16,7 @@ services:
       - AWX_DB_PASSWORD=${AWX_DB_PASSWORD}
       - AWX_ADMIN_USER=${AWX_ADMIN_USER:-admin}
       # For development, you can override the admin password directly:
-      # - AWX_ADMIN_PASSWORD=devpassword
+      - AWX_ADMIN_PASSWORD=devpassword
       - PLAYBOOKS_PATH=/ansible/playbooks
       - ANSIBLE_LOG_PATH=/opt/awx/logs/ansible.log
     depends_on:
