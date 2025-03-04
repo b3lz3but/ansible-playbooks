@@ -15,7 +15,6 @@ ENV DEBIAN_FRONTEND=noninteractive \
 RUN apt-get update && apt-get upgrade -y && \
     apt-get install -y --no-install-recommends \
     git \
-    curl \
     python3 \
     python3-pip \
     python3-venv \
@@ -35,17 +34,13 @@ RUN apt-get update && apt-get upgrade -y && \
     libxmlsec1-dev \
     xmlsec1 \
     libxmlsec1-openssl \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Create and activate virtual environment
 RUN python3 -m venv $VENV_PATH && \
     . $VENV_PATH/bin/activate && \
     pip install --upgrade pip wheel setuptools
-
-# Clone AWX repository (specific version)
-# Define AWX version and path
-ARG AWX_VERSION=24.6.0
-ARG AWX_PATH=/opt/awx
 
 # Download and extract AWX tarball
 RUN curl -L https://github.com/ansible/awx/archive/${AWX_VERSION}.tar.gz -o /tmp/awx-${AWX_VERSION}.tar.gz && \
