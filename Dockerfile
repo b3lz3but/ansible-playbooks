@@ -1,7 +1,7 @@
 # =========================================
 # === Build Stage: Compile & Install ===
 # =========================================
-FROM ubuntu:22.04 AS builder
+FROM ubuntu:20.04 AS builder
 
 # Set environment variables for build process
 ENV DEBIAN_FRONTEND=noninteractive \
@@ -57,6 +57,11 @@ RUN . $VENV_PATH/bin/activate && \
     pip install --no-cache-dir -r $AWX_PATH/requirements/requirements.txt && \
     rm -rf ~/.cache/pip
 
+RUN if [ -f "/opt/awx/requirements.txt" ]; then \
+    . /opt/venv/bin/activate && pip install -r /opt/awx/requirements.txt; \
+    else \
+    echo "ERROR: requirements.txt not found at /opt/awx/requirements.txt" >&2 && exit 1; \
+    fi
 
 # =========================================
 # === Final Runtime Stage ===
@@ -101,8 +106,9 @@ RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-reco
     libpython3-dev \
     zlib1g-dev \
     libxmlsec1-dev \
-    xmlsec1-openssl && \
-    rm -rf /var/lib/apt/lists/*
+    libxmlsec1-openssl \
+    && rm -rf /var/lib/apt/lists/*
+
 RUN pip3 install --no-cache-dir pyyaml ansible
 # Create dedicated user & group
 RUN groupadd -r ${AWX_GROUP} && \
@@ -120,7 +126,8 @@ COPY --chown=${AWX_USER}:${AWX_GROUP} inventory.ini /opt/awx/installer/inventory
 COPY --chown=${AWX_USER}:${AWX_GROUP} entrypoint.sh /entrypoint.sh
 COPY --chown=${AWX_USER}:${AWX_GROUP} utils.sh /opt/awx/utils.sh
 COPY --chown=${AWX_USER}:${AWX_GROUP} logger.sh /opt/awx/logger.sh
-COPY requirements.txt $AWX_PATH/requirements/requirements.txt
+COPY requirements.txt /opt/awx/requirements.txt
+RUN . /opt/venv/bin/activate && pip install -r /opt/awx/requirements.txt
 
 # Ensure scripts have execution permissions
 RUN chmod 0750 /entrypoint.sh
