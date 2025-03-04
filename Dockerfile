@@ -34,7 +34,8 @@ RUN apt-get update && apt-get upgrade -y && \
     libxmlsec1-dev \
     xmlsec1 \
     libxmlsec1-openssl \
-    curl \
+    # Added for uwsgi compilation
+    libpcre3-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Create and activate virtual environment
@@ -42,15 +43,10 @@ RUN python3 -m venv $VENV_PATH && \
     . $VENV_PATH/bin/activate && \
     pip install --upgrade pip wheel setuptools
 
-# Download and extract AWX tarball
-RUN curl -L https://github.com/ansible/awx/archive/${AWX_VERSION}.tar.gz -o /tmp/awx-${AWX_VERSION}.tar.gz && \
-    tar -xz -f /tmp/awx-${AWX_VERSION}.tar.gz -C /opt && \
-    mv /opt/awx-${AWX_VERSION} ${AWX_PATH} && \
-    rm /tmp/awx-${AWX_VERSION}.tar.gz && \
-    mkdir -p ${AWX_PATH}/installer
-COPY install.yml ${AWX_PATH}/installer/install.yml
+# Clone AWX repository (specific version)
+RUN git clone -b ${AWX_VERSION} --depth 1 https://github.com/ansible/awx.git $AWX_PATH
 
-# Ensure requirements file exists
+RUN test -f "$AWX_PATH/requirements/requirements.txt" && (echo "ERROR: requirements.txt missing" && exit 1)
 RUN test -f "$AWX_PATH/requirements/requirements.txt" || (echo "ERROR: requirements.txt missing" && exit 1)
 
 # Ensure the AWX data directory exists and mark installation as complete
@@ -62,7 +58,7 @@ RUN . $VENV_PATH/bin/activate && \
     rm -rf ~/.cache/pip
 
 # Remove build dependencies to reduce final image size
-RUN apt-get remove -y build-essential pkg-config make gcc && apt-get autoremove -y
+RUN apt-get remove -y build-essential pkg-config make gcc libpcre3-dev && apt-get autoremove -y
 
 # =========================================
 # === Final Runtime Stage ===
@@ -85,8 +81,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
     AWX_PATH=/opt/awx
 
 # Install essential runtime dependencies
-RUN apt-get update && apt-get upgrade -y && \
-    apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-recommends \
     git \
     python3 \
     python3-pip \
@@ -109,12 +104,12 @@ RUN apt-get update && apt-get upgrade -y && \
     zlib1g-dev \
     libxmlsec1-dev \
     xmlsec1 \
-    libxmlsec1-openssl \
-    && rm -rf /var/lib/apt/lists/*
+    libxmlsec1-openssl && \
+    rm -rf /var/lib/apt/lists/*
 
-# Install PyYAML (to avoid ModuleNotFoundError)
+# Install PyYAML and Ansible
+RUN pip3 install --no-cache-dir pyyaml ansible
 RUN pip install --no-cache-dir pyyaml ansible
-
 # Create dedicated user & group
 RUN groupadd -r ${AWX_GROUP} && \
     useradd -r -g ${AWX_GROUP} -d /home/${AWX_USER} -m -s /sbin/nologin ${AWX_USER}
@@ -133,7 +128,7 @@ COPY --chown=${AWX_USER}:${AWX_GROUP} utils.sh /opt/awx/utils.sh
 COPY --chown=${AWX_USER}:${AWX_GROUP} logger.sh /opt/awx/logger.sh
 
 # Ensure scripts have execution permissions
-RUN chmod 0750 /entrypoint.sh 
+RUN chmod 0750 /entrypoint.sh
 
 # Security hardening
 RUN echo "fs.suid_dumpable=0" >> /etc/sysctl.conf && \
@@ -141,8 +136,7 @@ RUN echo "fs.suid_dumpable=0" >> /etc/sysctl.conf && \
     chmod 600 /etc/sysctl.conf
 
 # Set file ownership at the end (after all copies)
-RUN chown -R ${AWX_USER}:${AWX_GROUP} $AWX_PATH && \
-    chmod -R g-w,o-w $AWX_PATH
+RUN chown -R ${AWX_USER}:${AWX_GROUP} $AWX_PATH && chmod -R g-w,o-w $AWX_PATH
 
 # Run as non-root user
 USER ${AWX_USER}
