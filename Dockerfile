@@ -32,8 +32,8 @@ RUN apt-get update && apt-get upgrade -y && \
     rm -rf /var/lib/apt/lists/*
 
 # Create and activate virtual environment and upgrade pip
-RUN python3 -m venv $VENV_PATH && \
-    $VENV_PATH/bin/pip install --upgrade pip wheel setuptools
+RUN python3 -m venv $VENV_PATH && . $VENV_PATH/bin/activate && \
+    pip install --upgrade pip wheel setuptools
 
 # Clone AWX source from GitHub (version 17.1.0)
 RUN git clone -b ${AWX_VERSION} --depth 1 https://github.com/ansible/awx.git $AWX_PATH
@@ -42,11 +42,12 @@ RUN git clone -b ${AWX_VERSION} --depth 1 https://github.com/ansible/awx.git $AW
 RUN mkdir -p /opt/awx/data
 
 # Copy your custom requirements.txt into AWX's requirements directory
-# (Ensure that your requirements.txt is in your build context.)
+# (Make sure your updated requirements.txt is in the build context.)
 COPY requirements.txt $AWX_PATH/requirements/requirements.txt
 
 # Install Python dependencies inside the virtualenv
-RUN $VENV_PATH/bin/pip install --no-cache-dir -r $AWX_PATH/requirements/requirements.txt && \
+RUN . $VENV_PATH/bin/activate && \
+    pip install --no-cache-dir -r $AWX_PATH/requirements/requirements.txt && \
     rm -rf ~/.cache/pip
 
 # === Final Stage: Build the runtime image ===
@@ -86,8 +87,9 @@ RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-reco
     zlib1g-dev \
     libxmlsec1-dev \
     libxmlsec1-openssl && \
-    rm -rf /var/lib/apt/lists/* && \
-    pip3 install --no-cache-dir pyyaml ansible
+    rm -rf /var/lib/apt/lists/*
+
+RUN pip3 install --no-cache-dir pyyaml ansible
 
 # Create non-root user for AWX
 RUN groupadd -r ${AWX_GROUP} && \
@@ -123,7 +125,7 @@ USER ${AWX_USER}
 # Expose AWX port
 EXPOSE 8052
 
-# Healthcheck for AWX web service
+# Healthcheck for the AWX web service
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=5 \
     CMD curl -fsSL http://localhost:8052/health || exit 1
 
