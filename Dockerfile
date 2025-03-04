@@ -46,7 +46,7 @@ RUN python3 -m venv $VENV_PATH && \
 # Clone AWX repository (specific version)
 RUN git clone -b ${AWX_VERSION} --depth 1 https://github.com/ansible/awx.git $AWX_PATH
 
-RUN test -f "$AWX_PATH/requirements/requirements.txt" && (echo "ERROR: requirements.txt missing" && exit 1)
+RUN [ -f "$AWX_PATH/requirements/requirements.txt" ] && (echo "ERROR: requirements.txt missing" >&2 && exit 1)
 RUN test -f "$AWX_PATH/requirements/requirements.txt" || (echo "ERROR: requirements.txt missing" && exit 1)
 
 # Ensure the AWX data directory exists and mark installation as complete
@@ -57,15 +57,13 @@ RUN . $VENV_PATH/bin/activate && \
     pip install --no-cache-dir -r $AWX_PATH/requirements/requirements.txt && \
     rm -rf ~/.cache/pip
 
-# Remove build dependencies to reduce final image size
-RUN apt-get remove -y build-essential pkg-config make gcc libpcre3-dev && apt-get autoremove -y
 
 # =========================================
 # === Final Runtime Stage ===
 # =========================================
 FROM ubuntu:22.04
 
-LABEL maintainer="Ciprian <ciprian@admintools.io>" \
+LABEL maintainer="Ciprian <ciprian@example.com>" \
     description="AWX (Ansible Tower) container" \
     version="24.6.0" \
     security="SECURITY_NIST_APPROVED=true"
@@ -74,7 +72,7 @@ LABEL maintainer="Ciprian <ciprian@admintools.io>" \
 ENV DEBIAN_FRONTEND=noninteractive \
     AWX_VERSION=17.1.0 \
     PYTHONUNBUFFERED=1 \
-    PATH="/usr/local/bin:${PATH}" \
+    PATH="/usr/local/bin:$PATH" \
     AWX_USER=awx-user \
     AWX_GROUP=awx-group \
     VENV_PATH=/opt/venv \
@@ -82,6 +80,8 @@ ENV DEBIAN_FRONTEND=noninteractive \
 
 # Install essential runtime dependencies
 RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-recommends \
+    git \
+    RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-recommends \
     git \
     python3 \
     python3-pip \
@@ -103,13 +103,9 @@ RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-reco
     libpython3-dev \
     zlib1g-dev \
     libxmlsec1-dev \
-    xmlsec1 \
-    libxmlsec1-openssl && \
+    xmlsec1-openssl && \
     rm -rf /var/lib/apt/lists/*
-
-# Install PyYAML and Ansible
 RUN pip3 install --no-cache-dir pyyaml ansible
-RUN pip install --no-cache-dir pyyaml ansible
 # Create dedicated user & group
 RUN groupadd -r ${AWX_GROUP} && \
     useradd -r -g ${AWX_GROUP} -d /home/${AWX_USER} -m -s /sbin/nologin ${AWX_USER}
@@ -122,10 +118,11 @@ COPY --from=builder --chown=${AWX_USER}:${AWX_GROUP} $AWX_PATH $AWX_PATH
 WORKDIR $AWX_PATH/installer
 
 # Copy configuration files
-COPY --chown=${AWX_USER}:${AWX_GROUP} inventory.ini /opt/awx/installer/inventory
+COPY --chown=${AWX_USER}:${AWX_GROUP} inventory.ini /opt/awx/installer/inventory.ini
 COPY --chown=${AWX_USER}:${AWX_GROUP} entrypoint.sh /entrypoint.sh
 COPY --chown=${AWX_USER}:${AWX_GROUP} utils.sh /opt/awx/utils.sh
 COPY --chown=${AWX_USER}:${AWX_GROUP} logger.sh /opt/awx/logger.sh
+COPY requirements.txt $AWX_PATH/requirements/requirements.txt
 
 # Ensure scripts have execution permissions
 RUN chmod 0750 /entrypoint.sh
