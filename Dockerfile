@@ -1,9 +1,7 @@
-# =========================================
 # === Build Stage: Compile & Install ===
-# =========================================
-FROM ubuntu:20.04 AS builder
+FROM ubuntu:22.04 AS builder
 
-# Set environment variables for build process
+# Build environment variables
 ENV DEBIAN_FRONTEND=noninteractive \
     AWX_VERSION=17.1.0 \
     PYTHONUNBUFFERED=1 \
@@ -11,7 +9,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
     VENV_PATH=/opt/venv \
     AWX_PATH=/opt/awx
 
-# Install essential build dependencies
+# Install build dependencies
 RUN apt-get update && apt-get upgrade -y && \
     apt-get install -y --no-install-recommends \
     git \
@@ -34,38 +32,28 @@ RUN apt-get update && apt-get upgrade -y && \
     libxmlsec1-dev \
     xmlsec1 \
     libxmlsec1-openssl \
-    # Added for uwsgi compilation
-    libpcre3-dev \
+    libpcre3-dev \ 
     && rm -rf /var/lib/apt/lists/*
 
 # Create and activate virtual environment
-RUN python3 -m venv $VENV_PATH && \
-    . $VENV_PATH/bin/activate && \
+RUN python3 -m venv $VENV_PATH && . $VENV_PATH/bin/activate && \
     pip install --upgrade pip wheel setuptools
 
-# Clone AWX repository (specific version)
+# Clone AWX source (version 17.1.0)
 RUN git clone -b ${AWX_VERSION} --depth 1 https://github.com/ansible/awx.git $AWX_PATH
 
-RUN [ -f "$AWX_PATH/requirements/requirements.txt" ] && (echo "ERROR: requirements.txt missing" >&2 && exit 1)
-RUN test -f "$AWX_PATH/requirements/requirements.txt" || (echo "ERROR: requirements.txt missing" && exit 1)
+# Ensure the AWX data directory exists (for installer marker)
+RUN mkdir -p /opt/awx/data
 
-# Ensure the AWX data directory exists and mark installation as complete
-RUN mkdir -p /opt/awx/data && touch /opt/awx/data/.installed
+# Copy requirements file into AWX source
+COPY requirements.txt $AWX_PATH/requirements/requirements.txt
 
-# Install Python dependencies
+# Install Python dependencies inside the virtualenv
 RUN . $VENV_PATH/bin/activate && \
     pip install --no-cache-dir -r $AWX_PATH/requirements/requirements.txt && \
     rm -rf ~/.cache/pip
 
-RUN if [ -f "/opt/awx/requirements.txt" ]; then \
-    . /opt/venv/bin/activate && pip install -r /opt/awx/requirements.txt; \
-    else \
-    echo "ERROR: requirements.txt not found at /opt/awx/requirements.txt" >&2 && exit 1; \
-    fi
-
-# =========================================
 # === Final Runtime Stage ===
-# =========================================
 FROM ubuntu:22.04
 
 LABEL maintainer="Ciprian <ciprian@example.com>" \
@@ -73,7 +61,7 @@ LABEL maintainer="Ciprian <ciprian@example.com>" \
     version="24.6.0" \
     security="SECURITY_NIST_APPROVED=true"
 
-# Set environment variables
+# Set runtime environment variables
 ENV DEBIAN_FRONTEND=noninteractive \
     AWX_VERSION=17.1.0 \
     PYTHONUNBUFFERED=1 \
@@ -83,7 +71,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
     VENV_PATH=/opt/venv \
     AWX_PATH=/opt/awx
 
-# Install essential runtime dependencies
+# Install runtime dependencies
 RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-recommends \
     git \
     python3 \
@@ -106,11 +94,11 @@ RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-reco
     libpython3-dev \
     zlib1g-dev \
     libxmlsec1-dev \
-    libxmlsec1-openssl \
-    && rm -rf /var/lib/apt/lists/*
-
+    xmlsec1-openssl && \
+    rm -rf /var/lib/apt/lists/*
 RUN pip3 install --no-cache-dir pyyaml ansible
-# Create dedicated user & group
+
+# Create non-root AWX user
 RUN groupadd -r ${AWX_GROUP} && \
     useradd -r -g ${AWX_GROUP} -d /home/${AWX_USER} -m -s /sbin/nologin ${AWX_USER}
 
@@ -118,18 +106,16 @@ RUN groupadd -r ${AWX_GROUP} && \
 COPY --from=builder --chown=${AWX_USER}:${AWX_GROUP} $VENV_PATH $VENV_PATH
 COPY --from=builder --chown=${AWX_USER}:${AWX_GROUP} $AWX_PATH $AWX_PATH
 
-# Set working directory
+# Set working directory to installer
 WORKDIR $AWX_PATH/installer
 
-# Copy configuration files
-COPY --chown=${AWX_USER}:${AWX_GROUP} inventory.ini /opt/awx/installer/inventory.ini
+# Copy configuration and utility files
+COPY --chown=${AWX_USER}:${AWX_GROUP} inventory.ini /opt/awx/installer/inventory
 COPY --chown=${AWX_USER}:${AWX_GROUP} entrypoint.sh /entrypoint.sh
 COPY --chown=${AWX_USER}:${AWX_GROUP} utils.sh /opt/awx/utils.sh
 COPY --chown=${AWX_USER}:${AWX_GROUP} logger.sh /opt/awx/logger.sh
-COPY requirements.txt /opt/awx/requirements.txt
-RUN . /opt/venv/bin/activate && pip install -r /opt/awx/requirements.txt
 
-# Ensure scripts have execution permissions
+# Ensure entrypoint script is executable
 RUN chmod 0750 /entrypoint.sh
 
 # Security hardening
@@ -137,18 +123,18 @@ RUN echo "fs.suid_dumpable=0" >> /etc/sysctl.conf && \
     echo "kernel.core_pattern=|/bin/false" >> /etc/sysctl.conf && \
     chmod 600 /etc/sysctl.conf
 
-# Set file ownership at the end (after all copies)
+# Adjust ownership and permissions
 RUN chown -R ${AWX_USER}:${AWX_GROUP} $AWX_PATH && chmod -R g-w,o-w $AWX_PATH
 
-# Run as non-root user
+# Switch to non-root user
 USER ${AWX_USER}
 
-# Expose necessary ports
+# Expose AWX port
 EXPOSE 8052
 
-# Healthcheck for AWX service
+# Healthcheck for the AWX web service
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=5 \
     CMD curl -fsSL http://localhost:8052/health || exit 1
 
-# Set entrypoint
+# Entrypoint
 ENTRYPOINT ["/entrypoint.sh"]

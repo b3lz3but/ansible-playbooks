@@ -11,10 +11,10 @@ services:
       - AWX_DB_PORT=5432
       - AWX_DB_NAME=awx
       - AWX_DB_USER=awx
-      - AWX_DB_PASSWORD=${AWX_DB_PASSWORD}
+      - AWX_DB_PASSWORD=${AWX_DB_PASSWORD:-awx_password}
       - AWX_ADMIN_USER=${AWX_ADMIN_USER:-admin}
-      # For development, you can override the admin password directly:
-      - AWX_ADMIN_PASSWORD=devpassword
+      # For development, default admin password is 'devpassword'; override via .env for production
+      - AWX_ADMIN_PASSWORD=${AWX_ADMIN_PASSWORD:-devpassword}
       - PLAYBOOKS_PATH=/ansible/playbooks
       - ANSIBLE_LOG_PATH=/opt/awx/logs/ansible.log
     depends_on:
@@ -53,7 +53,7 @@ services:
     environment:
       - POSTGRES_DB=awx
       - POSTGRES_USER=awx
-      - POSTGRES_PASSWORD=${AWX_DB_PASSWORD}
+      - POSTGRES_PASSWORD=${AWX_DB_PASSWORD:-awx_password}
       - POSTGRES_HOST_AUTH_METHOD=trust
       - POSTGRES_MAX_CONNECTIONS=100
       - SHARED_BUFFERS=256MB
@@ -87,14 +87,10 @@ services:
       timeout: 5s
       retries: 5
 
-volumes:
-  postgres_data:
-    driver: local
-  redis_data:
-    driver: local
-  awx_data:
-    driver: local
-
 networks:
   awx_network:
-    driver: bridge
+
+volumes:
+  awx_data:
+  postgres_data:
+  redis_data:

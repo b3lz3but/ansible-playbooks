@@ -108,6 +108,7 @@ main() {
 
     print_status "INFO" "🚀 Starting AWX installation process"
 
+    # Source utility scripts
     for script in "$AWX_UTILS" "$AWX_LOGGER"; do
         if [[ -f "$script" ]]; then
             source "$script"
@@ -127,6 +128,15 @@ main() {
     fi
 
     cd "$AWX_INSTALLER_DIR" || exit 1
+
+    # Update inventory with environment variables
+    sed -i "s/^pg_host=.*/pg_host=${AWX_DB_HOST}/" inventory
+    sed -i "s/^pg_port=.*/pg_port=${AWX_DB_PORT}/" inventory
+    sed -i "s/^pg_database=.*/pg_database=${AWX_DB_NAME}/" inventory
+    sed -i "s/^pg_username=.*/pg_username=${AWX_DB_USER}/" inventory
+    sed -i "s/^pg_password=.*/pg_password=${AWX_DB_PASSWORD}/" inventory
+    sed -i "s/^admin_user=.*/admin_user=${AWX_ADMIN_USER:-admin}/" inventory
+    sed -i "s/^admin_password=.*/admin_password=${AWX_ADMIN_PASSWORD:-password}/" inventory
 
     if [[ ! -f "install.yml" ]]; then
         print_status "ERROR" "install.yml playbook is missing!"
@@ -151,9 +161,10 @@ main() {
 
     print_status "INFO" "✅ AWX installation completed successfully!"
     print_status "INFO" "🌍 AWX is available at: http://${ip_address}:${AWX_PORT}"
-    print_status "INFO" "👉 Default credentials: admin / password"
+    print_status "INFO" "👉 Default credentials: ${AWX_ADMIN_USER:-admin} / ${AWX_ADMIN_PASSWORD:-password}"
     print_status "INFO" "📝 Please change the default password after first login"
 
+    # Keep container alive
     sleep infinity & wait
 }
 
