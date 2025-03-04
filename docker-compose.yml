@@ -45,9 +45,9 @@ services:
         limits:
           cpus: "1"
           memory: 1G
-    env_file:
-      - .env.awx
-    command: /bin/bash -c "chmod -R 777 /var/log && /entrypoint.sh"
+    # env_file:
+    # - .env.awx
+    # command: /bin/bash -c "chmod -R 777 /var/log && /entrypoint.sh"
 
   awx_postgres:
     image: postgres:14-alpine
