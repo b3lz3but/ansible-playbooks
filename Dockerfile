@@ -5,7 +5,7 @@ FROM ubuntu:22.04 AS builder
 
 # Set environment variables for build process
 ENV DEBIAN_FRONTEND=noninteractive \
-    AWX_VERSION=23.6.0 \
+    AWX_VERSION=17.1.0 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
     VENV_PATH=/opt/venv \
@@ -43,16 +43,12 @@ RUN python3 -m venv $VENV_PATH && \
     pip install --upgrade pip wheel setuptools
 
 # Download and extract AWX tarball
-RUN /bin/sh -c 'curl -L https://github.com/ansible/awx/archive/${AWX_VERSION}.tar.gz -o /tmp/awx-${AWX_VERSION}.tar.gz && \
+RUN curl -L https://github.com/ansible/awx/archive/${AWX_VERSION}.tar.gz -o /tmp/awx-${AWX_VERSION}.tar.gz && \
     tar -xz -f /tmp/awx-${AWX_VERSION}.tar.gz -C /opt && \
-    ls -la /opt/awx-${AWX_VERSION} && \
-    ls -la /opt/awx-${AWX_VERSION}/installer && \
     mv /opt/awx-${AWX_VERSION} ${AWX_PATH} && \
     rm /tmp/awx-${AWX_VERSION}.tar.gz && \
-    if [ ! -f "${AWX_PATH}/installer/install.yml" ]; then \
-    echo "ERROR: install.yml not found after extraction"; \
-    exit 1; \
-    fi'
+    mkdir -p ${AWX_PATH}/installer
+COPY install.yml ${AWX_PATH}/installer/install.yml
 
 # Ensure requirements file exists
 RUN test -f "$AWX_PATH/requirements/requirements.txt" || (echo "ERROR: requirements.txt missing" && exit 1)
@@ -80,7 +76,7 @@ LABEL maintainer="Ciprian <ciprian@admintools.io>" \
 
 # Set environment variables
 ENV DEBIAN_FRONTEND=noninteractive \
-    AWX_VERSION=23.6.0 \
+    AWX_VERSION=17.1.0 \
     PYTHONUNBUFFERED=1 \
     PATH="/usr/local/bin:${PATH}" \
     AWX_USER=awx-user \

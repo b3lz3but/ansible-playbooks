@@ -3,7 +3,7 @@
   become: yes
   vars:
     project_dir: "/path/to/your/project" # Adjust this path to your actual project directory
-    awx_version: "24.6.0"
+    awx_version: "17.1.0"
     awx_admin_user: "{{ lookup('env', 'AWX_ADMIN_USER') | default('admin') }}"
     awx_admin_password: "{{ lookup('env', 'AWX_ADMIN_PASSWORD') | default('password') }}"
     awx_db_host: "awx_postgres"
