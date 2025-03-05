@@ -70,28 +70,26 @@ wait_for_postgres() {
             print_status "ERROR" "PostgreSQL is not available after $MAX_RETRIES attempts"
             exit 1
         fi
-        print_status "INFO" "⏳ Waiting for PostgreSQL... (Attempt: ${counter}/${MAX_RETRIES})"
+        print_status "INFO" "⌛ Waiting for PostgreSQL... (Attempt: ${counter}/${MAX_RETRIES})"
         sleep "$WAIT_SECONDS"
     done
     print_status "INFO" "✅ PostgreSQL is available"
 }
 
+# Increase AWX wait timeout to 600 seconds
 wait_for_awx() {
-    local timeout=300
+    local timeout=600
     local start_time
     start_time=$(date +%s)
-
     while true; do
         if curl -fsSL "http://127.0.0.1:${AWX_PORT}/api/v2/ping/" >/dev/null 2>&1; then
             print_status "INFO" "✅ AWX is up and running!"
             return 0
         fi
-
         if (( $(date +%s) - start_time >= timeout )); then
             print_status "ERROR" "AWX failed to start within ${timeout} seconds"
             exit 1
         fi
-
         print_status "INFO" "⌛ Waiting for AWX... ($(( $(date +%s) - start_time ))/${timeout}s)"
         sleep 10
     done
@@ -103,7 +101,6 @@ main() {
         kill "$(jobs -p)" 2>/dev/null || true
         exit 0
     }
-
     trap cleanup TERM INT
 
     print_status "INFO" "🚀 Starting AWX installation process"
@@ -164,7 +161,6 @@ main() {
     print_status "INFO" "👉 Default credentials: ${AWX_ADMIN_USER:-admin} / ${AWX_ADMIN_PASSWORD:-password}"
     print_status "INFO" "📝 Please change the default password after first login"
 
-    # Keep container alive
     sleep infinity & wait
 }
 
