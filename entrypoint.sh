@@ -4,6 +4,11 @@ set -euo pipefail
 IFS=$'\n\t'
 set +x
 
+# Explicitly add standard binary directories to PATH
+export PATH="/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
+echo "SSH location: $(which ssh)"
+ssh -V
+
 # Increase retries if needed
 declare -r MAX_RETRIES=60
 declare -r WAIT_SECONDS=5
@@ -76,7 +81,6 @@ wait_for_postgres() {
     print_status "INFO" "✅ PostgreSQL is available"
 }
 
-# Increase AWX wait timeout to 600 seconds
 wait_for_awx() {
     local timeout=600
     local start_time
@@ -105,7 +109,6 @@ main() {
 
     print_status "INFO" "🚀 Starting AWX installation process"
 
-    # Source utility scripts
     for script in "$AWX_UTILS" "$AWX_LOGGER"; do
         if [[ -f "$script" ]]; then
             source "$script"
