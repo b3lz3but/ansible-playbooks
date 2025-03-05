@@ -63,7 +63,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
     VENV_PATH=/opt/venv \
     AWX_PATH=/opt/awx
 
-# Install runtime dependencies
+# Install runtime dependencies including the SSH client
 RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-recommends \
     git \
     python3 \
@@ -73,6 +73,7 @@ RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-reco
     dialog \
     whiptail \
     curl \
+    openssh-client \
     python3-yaml \
     jq \
     postgresql-client \
