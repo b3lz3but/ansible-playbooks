@@ -53,17 +53,17 @@ RUN . $VENV_PATH/bin/activate && \
 # === Final Stage: Build the runtime image ===
 FROM ubuntu:22.04
 
-# Set runtime environment variables
+# Set runtime environment variables and explicitly add common binary directories to PATH
 ENV DEBIAN_FRONTEND=noninteractive \
     AWX_VERSION=17.1.0 \
     PYTHONUNBUFFERED=1 \
-    PATH="/usr/local/bin:$PATH" \
+    PATH="/usr/bin:/bin:/usr/sbin:/sbin:$PATH" \
     AWX_USER=awx-user \
     AWX_GROUP=awx-group \
     VENV_PATH=/opt/venv \
     AWX_PATH=/opt/awx
 
-# Install runtime dependencies including the SSH client
+# Install runtime dependencies including openssh-client
 RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-recommends \
     git \
     python3 \
@@ -132,3 +132,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=5 \
 
 # Set the entrypoint
 ENTRYPOINT ["/entrypoint.sh"]
+
