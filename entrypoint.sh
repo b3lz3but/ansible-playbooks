@@ -4,28 +4,19 @@ set -euo pipefail
 IFS=$'\n\t'
 set +x
 
-# Explicitly add standard binary directories to PATH
 export PATH="/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
 echo "SSH location: $(which ssh)"
 ssh -V
 
-# If SSH configuration is mounted, attempt to copy it
-if [ -d "/mounted-ssh" ]; then
-    echo "Copying SSH configuration from /mounted-ssh to /home/awx-user/.ssh..."
-    mkdir -p /home/awx-user/.ssh
-    # Copy all files (including hidden ones) and ignore errors if any
-    cp -r /mounted-ssh/. /home/awx-user/.ssh/ || {
-        echo "WARNING: Could not copy all SSH configuration files from /mounted-ssh due to permission issues."
-    }
-    # Ensure proper permissions if the files exist
-    if [ -f /home/awx-user/.ssh/id_rsa ]; then
-        chmod 600 /home/awx-user/.ssh/id_rsa || true
-    fi
-    if [ -f /home/awx-user/.ssh/known_hosts ]; then
-        chmod 644 /home/awx-user/.ssh/known_hosts || true
-    fi
-    echo "SSH configuration copy step completed."
+# Ensure SSH directory exists and has correct permissions
+mkdir -p /home/awx-user/.ssh
+if [ -f /home/awx-user/.ssh/id_rsa ]; then
+    chmod 600 /home/awx-user/.ssh/id_rsa || echo "Note: Permissions unchanged due to read-only mount"
 fi
+if [ -f /home/awx-user/.ssh/known_hosts ]; then
+    chmod 644 /home/awx-user/.ssh/known_hosts || echo "Note: Permissions unchanged due to read-only mount"
+fi
+echo "SSH configuration setup completed."
 
 # Increase retries if needed
 declare -r MAX_RETRIES=60
