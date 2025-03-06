@@ -16,11 +16,11 @@ export ANSIBLE_HOST_KEY_CHECKING=False
 echo "Copying SSH configuration from /mounted-ssh to /home/awx-user/.ssh..."
 # Ensure the destination directory exists
 mkdir -p /home/awx-user/.ssh
-# Copy everything from /mounted-ssh (mounted via docker-compose) to the user's .ssh directory
+# Copy everything from /mounted-ssh (mounted via docker-compose) into the AWX user's .ssh directory
 cp -r /mounted-ssh/* /home/awx-user/.ssh/ 2>/dev/null || true
-# Adjust ownership so awx-user can use these files (assuming group awx-group)
+# Adjust ownership so that awx-user can use these files
 chown -R awx-user:awx-group /home/awx-user/.ssh
-# Set private keys to permission 600 (if they are files)
+# Set private key files to 600 permissions (if any are regular files)
 find /home/awx-user/.ssh -type f -exec chmod 600 {} \;
 echo "SSH configuration copied."
 
