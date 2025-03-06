@@ -29,10 +29,8 @@ services:
       - ./config.yaml:/opt/awx/config.yaml
       - ./playbooks:/ansible/playbooks
       - awx_data:/opt/awx/data
-      # Mount your SSH key (adjust the host path if your key is elsewhere)
-      - ~/.ssh/id_rsa:/home/awx-user/.ssh/id_rsa:ro
-      # Optionally, mount known_hosts if desired:
-      #- ~/.ssh/known_hosts:/home/awx-user/.ssh/known_hosts:ro
+      # Mount your entire .ssh directory from your host
+      - ${HOME}/.ssh:/home/awx-user/.ssh:ro
     security_opt:
       - no-new-privileges:true
     healthcheck:
