@@ -9,6 +9,21 @@ export PATH="/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
 echo "SSH location: $(which ssh)"
 ssh -V
 
+# Disable host key checking for Ansible
+export ANSIBLE_HOST_KEY_CHECKING=False
+
+# --- Copy SSH configuration ---
+echo "Copying SSH configuration from /mounted-ssh to /home/awx-user/.ssh..."
+# Ensure the destination directory exists
+mkdir -p /home/awx-user/.ssh
+# Copy everything from /mounted-ssh (mounted via docker-compose) to the user's .ssh directory
+cp -r /mounted-ssh/* /home/awx-user/.ssh/ 2>/dev/null || true
+# Adjust ownership so awx-user can use these files (assuming group awx-group)
+chown -R awx-user:awx-group /home/awx-user/.ssh
+# Set private keys to permission 600 (if they are files)
+find /home/awx-user/.ssh -type f -exec chmod 600 {} \;
+echo "SSH configuration copied."
+
 # Increase retries if needed
 declare -r MAX_RETRIES=60
 declare -r WAIT_SECONDS=5
