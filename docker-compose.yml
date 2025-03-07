@@ -1,4 +1,4 @@
-version: "3.9"
+version: "3.8"
 
 services:
   ansible_runner:
@@ -17,6 +17,19 @@ services:
       - ./ssh/id_rsa:/root/.ssh/id_rsa:ro
     working_dir: /ansible
     command: tail -f /var/log/ansible/ansible.log
+    expose:
+      - "5000"
+
+  nginx:
+    image: nginx:latest
+    container_name: nginx_reverse_proxy
+    restart: unless-stopped
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf
+      - ./webui:/usr/share/nginx/html
+      - /etc/letsencrypt:/etc/letsencrypt # For SSL certs
     ports:
-      - "5000:5000"
-      - "2222:22"
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - ansible_runner
