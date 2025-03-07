@@ -30,7 +30,7 @@ services:
       - ./playbooks:/ansible/playbooks
       - awx_data:/opt/awx/data
       # Mount your entire .ssh directory from the host to a temporary location (/mounted-ssh)
-      - ${HOME}/.ssh:/home/awx-user/.ssh:ro
+      - ${HOME}/.ssh:/home/awx-user/.ssh
     security_opt:
       - no-new-privileges:true
     healthcheck:
