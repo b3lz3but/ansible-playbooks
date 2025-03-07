@@ -1,0 +1,6 @@
+# Ignore sensitive or local files
+ssh/id_rsa
+logs/
+__pycache__/
+*.pyc
+.env

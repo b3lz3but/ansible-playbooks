@@ -1,96 +1,22 @@
+version: "3.9"
+
 services:
-  awx:
+  ansible_runner:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: awx
+    container_name: ansible_runner
     restart: unless-stopped
-    environment:
-      - AWX_VERSION=17.1.0
-      - AWX_DB_HOST=awx_postgres
-      - AWX_DB_PORT=5432
-      - AWX_DB_NAME=awx
-      - AWX_DB_USER=awx
-      - AWX_DB_PASSWORD=${AWX_DB_PASSWORD:-awx_password}
-      - AWX_ADMIN_USER=${AWX_ADMIN_USER:-admin}
-      - AWX_ADMIN_PASSWORD=${AWX_ADMIN_PASSWORD:-devpassword}
-      - PLAYBOOKS_PATH=/ansible/playbooks
-      - ANSIBLE_LOG_PATH=/opt/awx/logs/ansible.log
-    depends_on:
-      awx_postgres:
-        condition: service_healthy
-    ports:
-      - "127.0.0.1:8052:8052"
-    networks:
-      - awx_network
+    env_file:
+      - .env
     volumes:
-      - ./entrypoint.sh:/entrypoint.sh
-      - ./utils.sh:/opt/awx/utils.sh
-      - ./config.yaml:/opt/awx/config.yaml
       - ./playbooks:/ansible/playbooks
-      - awx_data:/opt/awx/data
-      - /root/awx-ssh/awx_key:/home/awx-user/.ssh/id_rsa:ro
-    security_opt:
-      - no-new-privileges:true
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://127.0.0.1:8052/api/v2/ping/"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    deploy:
-      resources:
-        limits:
-          cpus: "1"
-          memory: 2G
-    env_file:
-      - .env.awx
-    command: /bin/bash -c "chmod -R 777 /var/log && /entrypoint.sh"
-
-  awx_postgres:
-    image: postgres:14-alpine
-    container_name: awx_postgres
-    restart: unless-stopped
-    environment:
-      - POSTGRES_DB=awx
-      - POSTGRES_USER=awx
-      - POSTGRES_PASSWORD=${AWX_DB_PASSWORD:-awx_password}
-      - POSTGRES_HOST_AUTH_METHOD=trust
-      - POSTGRES_MAX_CONNECTIONS=100
-      - SHARED_BUFFERS=256MB
-    networks:
-      - awx_network
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    security_opt:
-      - no-new-privileges:true
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U awx -d awx"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    env_file:
-      - .env.postgres
-
-  redis:
-    image: redis:6-alpine
-    container_name: awx_redis
-    restart: unless-stopped
-    networks:
-      - awx_network
-    volumes:
-      - redis_data:/data
-    security_opt:
-      - no-new-privileges:true
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-networks:
-  awx_network:
-
-volumes:
-  awx_data:
-  postgres_data:
-  redis_data:
+      - ./inventory.ini:/ansible/inventory.ini
+      - ./config.yaml:/ansible/config.yaml
+      - ./logs:/var/log/ansible
+      - ./ssh/id_rsa:/root/.ssh/id_rsa:ro
+    working_dir: /ansible
+    command: tail -f /var/log/ansible/ansible.log
+    ports:
+      - "5000:5000"
+      - "2222:22"
