@@ -29,8 +29,7 @@ services:
       - ./config.yaml:/opt/awx/config.yaml
       - ./playbooks:/ansible/playbooks
       - awx_data:/opt/awx/data
-      # Mount your entire .ssh directory from the host to a temporary location (/mounted-ssh)
-      - /tmp/awx-ssh/awx_key:/home/awx-user/.ssh/id_rsa:ro
+      - /root/awx-ssh/awx_key:/home/awx-user/.ssh/id_rsa:ro
     security_opt:
       - no-new-privileges:true
     healthcheck:
