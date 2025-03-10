@@ -15,7 +15,7 @@ services:
       - ./ssh/id_rsa:/root/.ssh/id_rsa:ro
     working_dir: /ansible
     expose:
-      - "5000"
+      - "5000:5000"
 
   nginx:
     image: nginx:latest
