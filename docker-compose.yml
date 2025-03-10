@@ -1,5 +1,6 @@
 services:
   ansible_runner:
+    network_mode: host
     build:
       context: .
       dockerfile: Dockerfile
