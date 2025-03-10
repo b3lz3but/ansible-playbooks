@@ -68,7 +68,7 @@ def run():
     return jsonify({"message": message}), status_code
 
 
-@app.route("/health", methods=["GET"])
+@app.route("/api/health", methods=["GET"])
 @require_auth
 def health():
     return jsonify({"status": "ok"}), 200
