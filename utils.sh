@@ -21,10 +21,12 @@ log_success() {
 }
 
 load_config() {
-    if ! command -v python3 &>/dev/null || ! python3 -c "import yaml" &>/dev/null; then
-        log_error "Python3 and PyYAML are required."
+    if ! python3 -c "import yaml; yaml.safe_load(open('$CONFIG_FILE'))" &>/dev/null; then
+        log_error "Invalid YAML configuration."
         exit 1
     fi
+}
+
 }
 
 check_dependencies() {
