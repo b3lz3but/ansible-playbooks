@@ -41,4 +41,4 @@ RUN chmod +x /ansible/*.sh
 WORKDIR /ansible
 
 # Run Flask API and keep the container alive
-CMD ["bash", "-c", "python3 /ansible/api.py & tail -f /dev/null"]
+CMD ["python3", "/ansible/api.py"]
