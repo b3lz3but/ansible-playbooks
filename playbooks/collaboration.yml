@@ -52,7 +52,7 @@
         path: ~/.ssh/config
         create: yes
         mode: '0600'
-        line: |
+        line: |-
           Host *
             StrictHostKeyChecking accept-new
             HashKnownHosts yes

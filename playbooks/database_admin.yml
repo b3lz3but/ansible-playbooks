@@ -6,7 +6,6 @@
   become: true
   # Variables for MySQL configuration and backup settings
   vars:
-    mysql_root_password: "{{ vault_mysql_root_password }}"
     backup_dir: /backup/mysql
     backup_retention_days: 7
     mysql_config:
@@ -27,17 +26,17 @@
     - name: Secure MySQL installation
       mysql_user:
         login_user: root
-        login_password: "{{ mysql_root_password }}"
+        login_password: "{{ vault_mysql_root_password }}"
         check_implicit_admin: true
         user: root
         host_all: true
-        password: "{{ mysql_root_password }}"
+        password: "{{ vault_mysql_root_password }}"
         update_password: always
     # Remove anonymous users for security
     - name: Remove anonymous users
       mysql_user:
         login_user: root
-        login_password: "{{ mysql_root_password }}"
+        login_password: "{{ vault_mysql_root_password }}"
         user: ""
         host_all: true
         state: absent
@@ -65,7 +64,7 @@
         name: all
         target: "{{ backup_dir }}/mysql_backup_{{ ansible_date_time.date }}.sql"
         login_user: root
-        login_password: "{{ mysql_root_password }}"
+        login_password: "{{ vault_mysql_root_password }}"
       register: backup_result
       ignore_errors: true
     # Compress backup to save space
