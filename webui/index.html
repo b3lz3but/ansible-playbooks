@@ -3,27 +3,69 @@
 <head>
     <meta charset="UTF-8">
     <title>Ansible Playbook Dashboard</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
 </head>
 <body>
-    <h1>Welcome to Ansible Runner Dashboard</h1>
-    <button onclick="runPlaybook('playbook1.yml')">Run playbook1.yml</button>
-    <pre id="output"></pre>
+    <div class="container">
+        <header class="text-center my-4">
+            <h1>Welcome to Ansible Runner Dashboard</h1>
+        </header>
+        <main>
+            <div class="button-container d-flex flex-wrap justify-content-center">
+                <button class="btn btn-primary btn-playbook" onclick="runPlaybook('backup_files.yml')" aria-label="Run backup_files.yml">Run backup_files.yml</button>
+                <button class="btn btn-primary btn-playbook" onclick="runPlaybook('check_disk_space.yml')" aria-label="Run check_disk_space.yml">Run check_disk_space.yml</button>
+                <button class="btn btn-primary btn-playbook" onclick="runPlaybook('ci_cd.yml')" aria-label="Run ci_cd.yml">Run ci_cd.yml</button>
+                <button class="btn btn-primary btn-playbook" onclick="runPlaybook('cloud_management.yml')" aria-label="Run cloud_management.yml">Run cloud_management.yml</button>
+                <button class="btn btn-primary btn-playbook" onclick="runPlaybook('collaboration.yml')" aria-label="Run collaboration.yml">Run collaboration.yml</button>
+                <button class="btn btn-primary btn-playbook" onclick="runPlaybook('containerization.yml')" aria-label="Run containerization.yml">Run containerization.yml</button>
+                <button class="btn btn-primary btn-playbook" onclick="runPlaybook('database_admin.yml')" aria-label="Run database_admin.yml">Run database_admin.yml</button>
+                <button class="btn btn-primary btn-playbook" onclick="runPlaybook('documentation.yml')" aria-label="Run documentation.yml">Run documentation.yml</button>
+                <button class="btn btn-primary btn-playbook" onclick="runPlaybook('log_cleanup.yml')" aria-label="Run log_cleanup.yml">Run log_cleanup.yml</button>
+                <button class="btn btn-primary btn-playbook" onclick="runPlaybook('monitoring_logging.yml')" aria-label="Run monitoring_logging.yml">Run monitoring_logging.yml</button>
+                <button class="btn btn-primary btn-playbook" onclick="runPlaybook('network_check.yml')" aria-label="Run network_check.yml">Run network_check.yml</button>
+                <button class="btn btn-primary btn-playbook" onclick="runPlaybook('networking.yml')" aria-label="Run networking.yml">Run networking.yml</button>
+                <button class="btn btn-primary btn-playbook" onclick="runPlaybook('restart_services.yml')" aria-label="Run restart_services.yml">Run restart_services.yml</button>
+                <button class="btn btn-primary btn-playbook" onclick="runPlaybook('scripting_automation.yml')" aria-label="Run scripting_automation.yml">Run scripting_automation.yml</button>
+                <button class="btn btn-primary btn-playbook" onclick="runPlaybook('security_hardening.yml')" aria-label="Run security_hardening.yml">Run security_hardening.yml</button>
+                <button class="btn btn-primary btn-playbook" onclick="runPlaybook('security_scan.yml')" aria-label="Run security_scan.yml">Run security_scan.yml</button>
+                <button class="btn btn-primary btn-playbook" onclick="runPlaybook('system_administration.yml')" aria-label="Run system_administration.yml">Run system_administration.yml</button>
+                <button class="btn btn-primary btn-playbook" onclick="runPlaybook('system_health_monitor.yml')" aria-label="Run system_health_monitor.yml">Run system_health_monitor.yml</button>
+                <button class="btn btn-primary btn-playbook" onclick="runPlaybook('troubleshooting.yml')" aria-label="Run troubleshooting.yml">Run troubleshooting.yml</button>
+                <button class="btn btn-primary btn-playbook" onclick="runPlaybook('update_packages.yml')" aria-label="Run update_packages.yml">Run update_packages.yml</button>
+                <button class="btn btn-primary btn-playbook" onclick="runPlaybook('user_management.yml')" aria-label="Run user_management.yml">Run user_management.yml</button>
+            </div>
+            <pre id="output"></pre>
+        </main>
+    </div>
 
     <script>
-        async function runPlaybook(playbook) {
+    async function runPlaybook(playbook) {
+        try {
             const response = await fetch('/api/run', {
                 method: 'POST',
                 headers: {
-                    'Authorization': 'Basic ' + btoa('admin:supersecret'),
+                    'Authorization': 'Basic ' + btoa(getCredentials()), // Consider moving credentials to a secure location
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({ playbook })
             });
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Network response was not ok: ${errorText}`);
+            }
             const result = await response.json();
             document.getElementById('output').textContent = JSON.stringify(result, null, 2);
+        } catch (error) {
+            document.getElementById('output').textContent = 'Error: ' + error.message;
+        }
+    }
+
+    function getCredentials() {
+        // Fetch credentials from a secure location
+        return 'admin:supersecret';
     }
     </script>
-
 </body>
 </html>
