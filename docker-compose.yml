@@ -1,6 +1,8 @@
 version: "3.9"
 services:
   ansible_runner:
+    ports:
+      - "5000:5000"
     build:
       context: .
       dockerfile: Dockerfile
