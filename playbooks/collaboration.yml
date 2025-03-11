@@ -35,7 +35,7 @@
       when: ansible_os_family == "RedHat"
     # Set up global Git configuration using provided variables
     - name: Configure Git globally
-      git_config:
+      ansible.builtin.git_config:
         name: "{{ item.key }}"
         value: "{{ item.value }}"
         scope: global
