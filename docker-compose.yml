@@ -2,7 +2,7 @@ version: "3.9"
 services:
   ansible_runner:
     ports:
-      - "50001:5001"
+      - "5000:5000"
     build:
       context: .
       dockerfile: Dockerfile
@@ -17,8 +17,6 @@ services:
       - ./logs:/var/log/ansible
       - ./ssh/id_rsa:/root/.ssh/id_rsa:ro
     working_dir: /ansible
-    expose:
-      - "5000:5000"
     networks:
       - my-network
 

@@ -21,12 +21,10 @@ log_success() {
 }
 
 load_config() {
-    if ! python3 -c "import yaml; yaml.safe_load(open('$CONFIG_FILE'))" &>/dev/null; then
+    if ! python3 -c "import yaml,sys; yaml.safe_load(open('$CONFIG_FILE'))" >/dev/null 2>&1; then
         log_error "Invalid YAML configuration."
         exit 1
     fi
-}
-
 }
 
 check_dependencies() {
