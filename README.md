@@ -56,13 +56,13 @@ docker exec -it ansible_runner bash
 
 | Method | Endpoint  | Auth Required | Description            |
 | ------ | --------- | ------------- | ---------------------- |
-| GET    | `/health` | ✅             | API health check       |
-| POST   | `/run`    | ✅             | Trigger a playbook run |
+| GET    | `/api/health` | ✅             | API health check       |
+| POST   | `/api/run`    | ✅             | Trigger a playbook run |
 
 ### ▶️ Example: Run a playbook
 
 ```shell
-curl -X POST "http://localhost:5001/run" \
+ curl -X POST "http://localhost:5001/api/run" \
   -u admin:supersecret \
   -H "Content-Type: application/json" \
   -d '{"playbook": "playbook1.yml"}'
@@ -71,7 +71,7 @@ curl -X POST "http://localhost:5001/run" \
 ### ▶️ Example: Health check
 
 ```shell
-curl -u admin:supersecret "http://localhost:5001/health"
+ curl -u admin:supersecret "http://localhost:5001/api/health"
 ```
 
 ## 📑 Logs
@@ -101,7 +101,7 @@ chmod 600 ssh/id_rsa
 
 ## 🧩 Future Ideas
 
-- Token-based authentication work in proggres 🚧
-- Rate limiting work in proggres 🚧
-- User logging
-- Web dashboard - work in proggres 🚧
+ - Token-based authentication work in progress 🚧
+ - Rate limiting work in progress 🚧
+ - User logging
+ - Web dashboard - work in progress 🚧
