@@ -62,7 +62,7 @@ docker exec -it ansible_runner bash
 ### ▶️ Example: Run a playbook
 
 ```shell
-curl -X POST "http://localhost:5000/run" \
+curl -X POST "http://localhost:5001/run" \
   -u admin:supersecret \
   -H "Content-Type: application/json" \
   -d '{"playbook": "playbook1.yml"}'
@@ -71,7 +71,7 @@ curl -X POST "http://localhost:5000/run" \
 ### ▶️ Example: Health check
 
 ```shell
-curl -u admin:supersecret "http://localhost:5000/health"
+curl -u admin:supersecret "http://localhost:5001/health"
 ```
 
 ## 📑 Logs

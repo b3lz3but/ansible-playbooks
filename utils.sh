@@ -27,8 +27,6 @@ load_config() {
     fi
 }
 
-}
-
 check_dependencies() {
     local deps=(ansible sshpass python3-yaml jq curl)
     local missing=()
