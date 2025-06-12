@@ -1,8 +1,10 @@
 version: "3.9"
 services:
   ansible_runner:
+    # Expose the Flask API on host port 5000 while the application listens on
+    # container port 5001
     ports:
-      - "5000:5000"
+      - "5000:5001"
     build:
       context: .
       dockerfile: Dockerfile

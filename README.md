@@ -20,9 +20,17 @@ your-project/
 ├── Interactive_script.sh
 ├── api.py
 ├── .env
+├── nginx/
+│   └── nginx.conf
+├── webui/
+│   ├── index.html
+│   ├── script.js
+│   └── style.css
 ├── playbooks/
 │   ├── playbook1.yml
 │   ├── playbook2.yml
+├── templates/
+│   └── *.j2
 ├── logs/
 │   ├── ansible.log
 │   ├── api-playbook.log
@@ -32,13 +40,15 @@ your-project/
 
 ## ⚙️ Environment Variables (.env)
 
-Copy `.env.example` to `.env` and edit the credentials:
+Copy `.env.example` to `.env` and edit the credentials used for API authentication:
 
 ```shell
 cp .env.example .env
 API_USER=yourusername
 API_PASS=yourpassword
 ```
+The `docker-compose.yml` file maps host port **5000** to the API running on
+port **5001** inside the container.
 
 ## 🚀 Quick Start
 
@@ -48,6 +58,20 @@ API_PASS=yourpassword
 docker-compose build
 docker-compose up -d
 ```
+
+The API will be available on `http://localhost:5000` and the optional web
+interface will be served via Nginx on `http://localhost:8180` (or `https://localhost:9443` if you provide certificates).
+
+### 🌐 Web UI
+
+Open your browser at `http://localhost:8180` to use the simple dashboard for
+executing playbooks. The UI communicates with the API using the credentials from
+your `.env` file.
+
+### 🖥️ Interactive CLI
+
+Run `Interactive_script.sh` inside the container to select and execute
+available playbooks directly from the command line.
 
 ### 2️⃣ Access the container (optional):
 
