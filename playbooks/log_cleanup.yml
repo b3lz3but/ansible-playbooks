@@ -6,7 +6,7 @@
 - name: Log Files Cleanup
   hosts: all
   become: true
-  
+
   # Configuration variables
   vars:
     # Number of days to keep logs
