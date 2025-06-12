@@ -103,9 +103,7 @@ chmod 600 ssh/id_rsa
 - For production, use HTTPS via reverse proxy (like Nginx).
 
 ## 🧩 Future Ideas
-
 - Token-based authentication work in progress 🚧
 - Rate limiting work in progress 🚧
 - User logging
 - Web dashboard - work in progress 🚧
-

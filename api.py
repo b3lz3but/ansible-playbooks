@@ -111,7 +111,6 @@ def run_playbook(playbook):
         return False, {"message": "An error occurred.", "error": str(e)}, 500
 
 
-# Endpoint to trigger playbook execution
 @app.route("/api/run", methods=["POST"])
 @require_auth
 def run():
