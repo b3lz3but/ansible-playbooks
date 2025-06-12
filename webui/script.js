@@ -1,5 +1,3 @@
-import { getCredentials } from './credentials.js';
-
 async function runPlaybook(playbook) {
     try {
         const response = await fetch('/api/run', {
@@ -22,7 +20,6 @@ async function runPlaybook(playbook) {
         document.getElementById('output').textContent = 'Error: ' + error.message;
     }
 }
-
 function getCredentials() {
     // Fetch credentials from a secure location
     return 'admin:supersecret';
