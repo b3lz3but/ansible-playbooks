@@ -32,9 +32,12 @@ your-project/
 
 ## ⚙️ Environment Variables (.env)
 
+Copy `.env.example` to `.env` and edit the credentials:
+
 ```shell
-API_USER=admin
-API_PASS=supersecret
+cp .env.example .env
+API_USER=yourusername
+API_PASS=yourpassword
 ```
 
 ## 🚀 Quick Start
@@ -62,7 +65,7 @@ docker exec -it ansible_runner bash
 ### ▶️ Example: Run a playbook
 
 ```shell
- curl -X POST "http://localhost:5001/api/run" \
+curl -X POST "http://localhost:5000/api/run"
   -u admin:supersecret \
   -H "Content-Type: application/json" \
   -d '{"playbook": "playbook1.yml"}'
@@ -71,7 +74,7 @@ docker exec -it ansible_runner bash
 ### ▶️ Example: Health check
 
 ```shell
- curl -u admin:supersecret "http://localhost:5001/api/health"
+curl -u admin:supersecret "http://localhost:5000/api/health"
 ```
 
 ## 📑 Logs
@@ -100,8 +103,7 @@ chmod 600 ssh/id_rsa
 - For production, use HTTPS via reverse proxy (like Nginx).
 
 ## 🧩 Future Ideas
-
- - Token-based authentication work in progress 🚧
- - Rate limiting work in progress 🚧
- - User logging
- - Web dashboard - work in progress 🚧
+- Token-based authentication work in progress 🚧
+- Rate limiting work in progress 🚧
+- User logging
+- Web dashboard - work in progress 🚧
