@@ -111,7 +111,7 @@ def run_playbook(playbook):
         return False, {"message": "An error occurred.", "error": str(e)}, 500
 
 
-@app.route("/run", methods=["POST"])
+@app.route("/api/run", methods=["POST"])
 @require_auth
 def run():
     data = request.get_json()
